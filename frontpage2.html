@@ -15,8 +15,20 @@
       <span class="text-xs bg-indigo-950 border border-indigo-800 text-indigo-300 font-semibold px-2.5 py-1 rounded-full">ML Active</span>
     </div>
 
-    <div class="flex items-center space-x-4">
-      <span id="navUsername" class="text-sm font-semibold text-slate-300">Welcome, Developer</span>
+    <div class="flex items-center space-x-3">
+      <span id="navUsername" class="text-sm font-semibold text-slate-300 mr-2">Welcome, Developer</span>
+      
+      <!-- LeetCode Sync Button -->
+      <button id="syncBtnNav" onclick="handleSyncRedirect()" class="text-xs bg-rose-600 hover:bg-rose-500 text-white font-semibold px-3 py-1.5 rounded-lg transition">
+        Not Synced
+      </button>
+
+      <!-- Login Button -->
+      <button id="loginBtn" onclick="window.location.href='/front.html'" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-3 py-1.5 rounded-lg transition">
+        Log In
+      </button>
+
+      <!-- Logout Button -->
       <button onclick="logout()" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-lg transition">
         Log Out
       </button>
@@ -82,6 +94,9 @@
         </div>
       </div>
 
+      <!-- User Status / Warning Text Div -->
+      <div id="userTextDiv" class="text-sm font-semibold text-center mb-2"></div>
+
       <!-- Recommendation Result Card -->
       <div id="recCard" class="bg-slate-900 border border-slate-700 rounded-xl p-8 text-center space-y-6">
         <div class="space-y-2">
@@ -105,54 +120,145 @@
     </div>
 
   </main>
+
 <script>
   let user = JSON.parse(localStorage.getItem('user'));
-  if (!user || !user.uid) {
-    window.location.href = '/';
-  }
-
   let currentRecId = null;
 
-  // Initialize Dashboard on Page Load
-  async function initDashboard() {
-    // 1. Set initial UI state from local cache immediately
-    renderUserInfo();
-
-    // 2. Fetch fresh user data from server to keep sync
+  // Check sync status from backend
+  async function checkBackendSyncStatus(uid) {
     try {
-      const res = await fetch(`/api/user/${user.uid}`);
+      const res = await fetch(`/api/is-synced/${uid}`);
       if (res.ok) {
-        const freshUserData = await res.json();
-        // Merge and save fresh data to localStorage
-        user = { ...user, ...freshUserData };
-        localStorage.setItem('user', JSON.stringify(user));
-        
-        // Re-render UI with updated backend state
-        renderUserInfo();
+        const data = await res.json();
+        return Boolean(data.is_synced); // Expects { is_synced: true/false }
       }
     } catch (err) {
-      console.warn("Could not fetch latest user details, using cached local state:", err);
+      console.warn("Error checking sync status from backend:", err);
+    }
+    return false;
+  }
+
+  // Redirect to profile setup if not synced or unauthenticated
+  function handleSyncRedirect() {
+    const userTextDiv = document.getElementById('userTextDiv');
+    const loginBtn = document.getElementById('loginBtn');
+
+    // If user does not exist, show login alert
+    if (!user || !user.uid) {
+      if (userTextDiv) {
+        userTextDiv.innerText = "You are not logged in. Please log in first.";
+        userTextDiv.style.color = "#f87171"; // Red text
+      }
+
+      if (loginBtn) {
+        loginBtn.style.backgroundColor = "#059669"; // Emerald green
+        loginBtn.style.color = "#ffffff";           // White text
+      }
+
+      updateSyncButton(false);
+      return;
+    }
+
+    window.location.href = './profile_setup.html';
+  }
+
+  // Update visual state of the navbar Sync Button
+  function updateSyncButton(isSynced) {
+    const syncBtn = document.getElementById('syncBtnNav');
+    if (!syncBtn) return;
+
+    if (isSynced) {
+      syncBtn.innerText = "Synced ✓";
+      syncBtn.className = "text-xs bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-lg cursor-default";
+      syncBtn.onclick = null;
+      syncBtn.disabled = true;
+    } else {
+      syncBtn.innerText = "Not Synced";
+      syncBtn.className = "text-xs bg-rose-600 hover:bg-rose-500 text-white font-semibold px-3 py-1.5 rounded-lg transition cursor-pointer";
+      syncBtn.onclick = handleSyncRedirect;
+      syncBtn.disabled = false;
     }
   }
 
-  // Helper to update DOM elements
-  function renderUserInfo() {
-    document.getElementById('navUsername').textContent = `Welcome, ${user.username || 'Developer'}`;
-    document.getElementById('statUid').textContent = `#${user.uid}`;
-    document.getElementById('statCount').textContent = user.question_count || 0;
+  // Initialize Dashboard on Page Load
+  async function initDashboard() {
+    if (!user || !user.uid) {
+      updateSyncButton(false);
+      return;
+    }
 
+    // 1. Render local cache immediately
+    renderUserInfo();
+
+    // 2. Fetch fresh user details & sync status in parallel
+    try {
+      const [freshUserRes, isSynced] = await Promise.all([
+        fetch(`/api/user/${user.uid}`).then(r => r.ok ? r.json() : null),
+        checkBackendSyncStatus(user.uid)
+      ]);
+
+      if (freshUserRes) {
+        user = { ...user, ...freshUserRes };
+        localStorage.setItem('user', JSON.stringify(user));
+        renderUserInfo();
+      }
+
+      // Update button state once with fresh backend verdict
+      updateSyncButton(isSynced);
+
+    } catch (err) {
+      console.warn("Could not fetch latest details, using cached state:", err);
+      // Fallback: check sync status once using local ID
+      const fallbackSync = await checkBackendSyncStatus(user.uid);
+      updateSyncButton(fallbackSync);
+    }
+  }
+
+  // Update DOM elements with user info
+  function renderUserInfo() {
+    if (!user) return;
+    
+    const navUser = document.getElementById('navUsername');
+    const statUid = document.getElementById('statUid');
+    const statCount = document.getElementById('statCount');
     const badge = document.getElementById('statVectorStatus');
-    if (user.has_vector) {
-      badge.textContent = "Active";
-      badge.className = "text-xs font-semibold text-emerald-400 bg-emerald-950/50 border border-emerald-800 px-2 py-0.5 rounded";
-    } else {
-      badge.textContent = "Pending";
-      badge.className = "text-xs font-semibold text-amber-400 bg-amber-950/50 border border-amber-800 px-2 py-0.5 rounded";
+
+    if (navUser) navUser.textContent = `Welcome, ${user.username || 'Developer'}`;
+    if (statUid) statUid.textContent = `#${user.uid}`;
+    if (statCount) statCount.textContent = user.question_count || 0;
+
+    if (badge) {
+      if (user.has_vector) {
+        badge.textContent = "Active";
+        badge.className = "text-xs font-semibold text-emerald-400 bg-emerald-950/50 border border-emerald-800 px-2 py-0.5 rounded";
+      } else {
+        badge.textContent = "Pending";
+        badge.className = "text-xs font-semibold text-amber-400 bg-amber-950/50 border border-amber-800 px-2 py-0.5 rounded";
+      }
     }
   }
 
   // Fetch Recommendation from API
   async function fetchRecommendation() {
+    const userTextDiv = document.getElementById('userTextDiv');
+    const loginBtn = document.getElementById('loginBtn');
+
+    if (!user || !user.uid) {
+      if (userTextDiv) {
+        userTextDiv.innerText = "You are not logged in. Please log in first.";
+        userTextDiv.style.color = "#f87171";
+      }
+
+      if (loginBtn) {
+        loginBtn.style.backgroundColor = "#059669";
+        loginBtn.style.color = "#ffffff";
+      }
+
+      updateSyncButton(false);
+      return;
+    }
+
     const difficulty = document.getElementById('diffFilter').value;
     const recTitle = document.getElementById('recTitle');
     const recDiff = document.getElementById('recDifficulty');
@@ -199,7 +305,7 @@
     fetchRecommendation();
   }
 
-  // Mark Quick Solved Form
+  // Mark Quick Solved Form listener
   document.getElementById('markSolvedForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const qNum = parseInt(document.getElementById('quickQNum').value);
@@ -207,7 +313,9 @@
     document.getElementById('quickQNum').value = '';
   });
 
+  // Submit solved problem to backend
   async function submitSolved(question_number) {
+    if (!user || !user.uid) return;
     try {
       const res = await fetch('/api/add-solved', {
         method: 'POST',
@@ -217,26 +325,23 @@
       
       if (res.ok) {
         const data = await res.json();
-        // Update local object & Storage with new count / vector state
         user.question_count = data.question_count ?? ((user.question_count || 0) + 1);
         user.has_vector = true;
         localStorage.setItem('user', JSON.stringify(user));
         
-        // Re-render stats badges
         renderUserInfo();
+        updateSyncButton(true);
       }
     } catch (err) {
-      console.error("Failed to mark solved", err);
+      console.error("Failed to mark solved:", err);
     }
   }
 
   function logout() {
     localStorage.clear();
-    window.location.href = '/';
+    window.location.href = '/front.html';
   }
 
-  // Run initialization when page loads
+  // Run initialization
   initDashboard();
 </script>
-</body>
-</html>

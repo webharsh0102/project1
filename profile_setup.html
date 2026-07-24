@@ -87,9 +87,7 @@
 
   <script>
     const user = JSON.parse(localStorage.getItem('user'));
-    if (!user || !user.uid) {
-      window.location.href = '/';
-    }
+    
 
     const addedQuestions = new Set();
 
