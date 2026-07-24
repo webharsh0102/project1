@@ -24,9 +24,9 @@
       </button>
 
       <!-- Login Button -->
-      <button id="loginBtn" onclick="window.location.href='/front.html'" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-3 py-1.5 rounded-lg transition">
-        Log In
-      </button>
+      <button id="loginBtn" onclick="handleLoginClick()" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-3 py-1.5 rounded-lg transition">
+  Log In
+</button>
 
       <!-- Logout Button -->
       <button onclick="logout()" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-lg transition">
@@ -124,6 +124,43 @@
 <script>
   let user = JSON.parse(localStorage.getItem('user'));
   let currentRecId = null;
+  // Check if user session exists in localStorage
+if (user && user.uid) {
+  const loginBtn = document.getElementById('loginBtn');
+  
+  if (loginBtn) {
+    // 1. Change button text
+    loginBtn.innerText = 'Logged In';
+    
+    // 2. Disable the button
+    loginBtn.disabled = true;
+    
+    // 3. Remove hover/click styling and update visual appearance
+    loginBtn.classList.remove('hover:bg-indigo-500', 'cursor-pointer');
+    loginBtn.classList.add('bg-slate-700', 'text-slate-400', 'cursor-not-allowed', 'opacity-80');
+    
+    // 4. Clear any inline onclick redirect handler
+    loginBtn.onclick = null;
+  }
+}
+  //login button
+  function handleLoginClick() {
+  const userTextDiv = document.getElementById('userTextDiv');
+
+  // Check if user session exists in localStorage
+  if (user && user.uid) {
+    // User is already logged in
+    if (userTextDiv) {
+      userTextDiv.innerText = "You are already logged in!";
+      userTextDiv.style.color = "#34d399"; // Emerald green text
+    } else {
+      alert("You are already logged in!");
+    }
+  } else {
+    // User is NOT logged in -> proceed to login page
+    window.location.href = '/front.html';
+  }
+}
 
   // Check sync status from backend
   async function checkBackendSyncStatus(uid) {
@@ -156,7 +193,7 @@
         loginBtn.style.color = "#ffffff";           // White text
       }
 
-      updateSyncButton(false);
+      
       return;
     }
 
@@ -171,8 +208,8 @@
     if (isSynced) {
       syncBtn.innerText = "Synced ✓";
       syncBtn.className = "text-xs bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-lg cursor-default";
-      syncBtn.onclick = null;
-      syncBtn.disabled = true;
+      syncBtn.onclick = handleSyncRedirect;
+      syncBtn.disabled = false;
     } else {
       syncBtn.innerText = "Not Synced";
       syncBtn.className = "text-xs bg-rose-600 hover:bg-rose-500 text-white font-semibold px-3 py-1.5 rounded-lg transition cursor-pointer";
@@ -330,7 +367,6 @@
         localStorage.setItem('user', JSON.stringify(user));
         
         renderUserInfo();
-        updateSyncButton(true);
       }
     } catch (err) {
       console.error("Failed to mark solved:", err);

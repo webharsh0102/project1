@@ -21,6 +21,70 @@ const pool = mysql.createPool({
     waitForConnections: true,
     connectionLimit: 10
 });
+// added all quesztion manually 
+// POST /api/save-manual-setup
+app.post('/api/save-manual-setup', async (req, res) => {
+  const { uid, questions } = req.body;
+
+  if (!uid) {
+    return res.status(400).json({ success: false, error: 'Missing required parameter: uid' });
+  }
+
+  // Get a connection from the pool for a transaction
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    // 1. If user added manual questions, bulk insert them into user_problems / solved table
+    if (Array.isArray(questions) && questions.length > 0) {
+      const values = questions.map(qNum => [uid, qNum]);
+      
+      // Using INSERT IGNORE so duplicate entries won't crash the query
+      await connection.query(
+        'INSERT IGNORE INTO user_solved_history (uid, question_number) VALUES ?',
+        [values]
+      );
+      await refreshUserProfileVector(connection, uid);
+
+      // 2. Mark the user as synced in the users table
+    const [userUpdate] = await connection.query(
+      'UPDATE users SET synced = 1 WHERE uid = ?',
+      [uid]
+    );
+    
+    if (userUpdate.affectedRows === 0) {
+      await connection.rollback();
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    }
+
+    
+
+    
+
+    // Commit transaction
+    await connection.commit();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Manual questions saved and user profile marked as synced.',
+      addedCount: questions ? questions.length : 0,
+      synced: 1
+    });
+
+  } catch (err) {
+    await connection.rollback();
+    console.error('Error saving manual questions setup:', err);
+    return res.status(500).json({ 
+      success: false, 
+      error: 'Database transaction failed while saving questions.' 
+    });
+  } finally {
+    connection.release();
+  }
+});
 
 // Helper function: Recalculates user profile average vector and count in MySQL
 async function refreshUserProfileVector(connection, uid) {
@@ -64,7 +128,7 @@ app.get('/api/is-synced/:uid', async (req, res) => {
   try {
     // 1. Query the database for the user's synced column
     // (Adjust the query syntax below based on your DB library: mysql2, pg, sqlite3, knex, etc.)
-    const [rows] = await db.query('SELECT synced FROM users WHERE uid = ?', [uid]);
+    const [rows] = await pool.query('SELECT synced FROM users WHERE uid = ?', [uid]);
 
     // 2. If user doesn't exist, return not synced
     if (!rows || rows.length === 0) {
@@ -112,6 +176,49 @@ app.post('/api/add-solved', async (req, res) => {
 
 // =====================================================================
 // API 2: Sync Profile via Token Hook
+// POST /api/mark-synced
+app.post('/api/mark-synced', async (req, res) => {
+  const { uid } = req.body;
+
+  // 1. Validate request body
+  if (!uid) {
+    return res.status(400).json({ 
+      success: false, 
+      error: 'Missing required parameter: uid' 
+    });
+  }
+
+  try {
+    // 2. Update user's synced status in MySQL database
+    const [result] = await pool.query(
+      'UPDATE users SET synced = 1 WHERE uid = ?',
+      [uid]
+    );
+
+    // 3. Check if user existed in database
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'User not found' 
+      });
+    }
+
+    // 4. Return success response
+    return res.status(200).json({ 
+      success: true, 
+      message: 'User synchronization status updated successfully.',
+      uid: uid,
+      synced: 1
+    });
+
+  } catch (err) {
+    console.error('Error in /api/mark-synced:', err);
+    return res.status(500).json({ 
+      success: false, 
+      error: 'Internal server error while updating sync status.' 
+    });
+  }
+});
 // =====================================================================
 app.post('/api/sync-leetcode', async (req, res) => {
     const { uid, cookie, csrf_token } = req.body;

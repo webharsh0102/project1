@@ -77,6 +77,33 @@
       </div>
     </div>
 
+    <!-- add box to check if user have no question till now  -->
+
+     <div class="relative flex py-1 items-center">
+      <div class="flex-grow border-t border-slate-700"></div>
+      <span class="flex-shrink mx-4 text-xs font-semibold uppercase text-slate-500">Or Mark down as Not Solved</span>
+      <div class="flex-grow border-t border-slate-700"></div>
+    </div>
+
+
+    <!--divider-->
+
+
+    <div class="space-y-4">
+  <!-- Checkbox Container -->
+  <div class="flex items-center space-x-3 bg-slate-900/60 border border-slate-700 rounded-xl p-3.5">
+    <input 
+      type="checkbox" 
+      id="noSolvedCheckbox" 
+      onchange="toggleNoSolvedState()"
+      class="w-4 h-4 text-indigo-600 bg-slate-800 border-slate-600 rounded focus:ring-indigo-500 focus:ring-offset-slate-900 cursor-pointer"
+    >
+    <label for="noSolvedCheckbox" class="text-xs text-slate-300 font-medium cursor-pointer select-none">
+      I haven't solved any LeetCode questions yet (Start with fresh profile)
+    </label>
+  </div>
+
+
     <!-- Final Proceed Action -->
     <button onclick="finishSetup()" 
             class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-lg transition shadow-lg shadow-emerald-600/20 text-base">
@@ -172,9 +199,73 @@
       ).join('');
     }
 
-    function finishSetup() {
-      window.location.href = '/frontpage2.html';
+
+
+    async function finishSetup() {
+  const checkbox = document.getElementById('noSolvedCheckbox');
+  const isChecked = checkbox && checkbox.checked;
+  const questionList = Array.from(addedQuestions); // Array of manual questions [1, 15, 42...]
+
+  // Validate user session
+  if (!user || !user.uid) {
+    alert("User session not found. Please log in again.");
+    return;
+  }
+
+  try {
+    // CASE 1: User added manual questions -> Call API to batch save questions & mark synced
+    if (questionList.length > 0) {
+      showAlert("Saving manual questions and updating profile...", true);
+
+      const response = await fetch('/api/save-manual-setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          uid: user.uid, 
+          questions: questionList 
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        console.error("Manual question batch save failed:", data.error);
+        return showAlert(data.error || "Failed to save questions.", false);
+      }
+      // Persist state change to localStorage
+      user.synced = 1;
+      localStorage.setItem('user', JSON.stringify(user));
+
+      
+    } 
+    // CASE 2: No manual questions added, but "Not Solved" box is marked -> Call direct mark-synced API
+    else if (isChecked) {
+      showAlert("Setting up fresh profile status...", true);
+
+      const response = await fetch('/api/mark-synced', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid: user.uid })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        console.error("Marking synced failed:", data.error);
+        return showAlert(data.error || "Failed to update sync status.", false);
+      }
+      // Persist state change to localStorage
+      user.synced = 1;
+      localStorage.setItem('user', JSON.stringify(user));
+
+
     }
+  } catch (error) {
+    console.error("Error during finishSetup execution:", error);
+    return showAlert("Network error while completing setup.", false);
+  }
+
+  // Redirect to dashboard
+  window.location.href = '/frontpage2.html';
+}
   </script>
 </body>
 </html>
