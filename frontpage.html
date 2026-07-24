@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode Vector Tracker</title>
+    <link rel="stylesheet" href="csspage.css">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>LeetCode Progression Engine</h1>
+            <p>Vector Space Recommendation Pipeline</p>
+        </header>
+
+        <main class="dashboard-grid">
+            <!-- Left Panel: Profile Management & Recommendations -->
+            <section class="panel control-panel">
+                <h2>Account Sync</h2>
+                <div class="form-group">
+                    <label for="uidInput">User ID (UID)</label>
+                    <input type="text" id="uidInput" value="harsh_dev" placeholder="Enter your UID">
+                </div>
+                <div class="form-group">
+                    <label for="cookieInput">LeetCode Session Cookie</label>
+                    <input type="password" id="cookieInput" placeholder="Paste LEETCODE_SESSION cookie">
+                </div>
+                <div class="button-group">
+                    <button id="btnSync" class="btn primary">Sync LeetCode Profile</button>
+                </div>
+
+                <hr class="divider">
+
+                <h2>Manual Action</h2>
+                <div class="form-group inline">
+                    <input type="number" id="manualQNum" placeholder="Question #">
+                    <button id="btnAddManual" class="btn secondary">Link Solved</button>
+                </div>
+
+                <hr class="divider">
+
+                <h2>Get Next Challenge</h2>
+                <div class="form-group">
+                    <label for="difficultyFilter">Target Difficulty</label>
+                    <select id="difficultyFilter">
+                        <option value="">Any Difficulty</option>
+                        <option value="Easy">Easy</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Hard">Hard</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="topicFilter">Target Topic</label>
+                    <select id="topicFilter">
+                        <option value="">Any Topic</option>
+                        <option value="Arrays">Arrays & Strings</option>
+                        <option value="DP">Dynamic Programming</option>
+                        <option value="Math">Math</option>
+                        <option value="Matrix">Matrix</option>
+                    </select>
+                </div>
+                <button id="btnRecommend" class="btn success">Compute Optimal Problem</button>
+
+                <div id="statusMessage" class="status-msg"></div>
+            </section>
+
+            <!-- Right Panel: Recommendation Output -->
+            <section class="panel display-panel">
+                <h2>Recommendation Engine Output</h2>
+                <div id="recommendationBox" class="recommendation-box">
+                    <p class="placeholder-text">Configure your profile filters and click "Compute Optimal Problem" to trigger the vector proximity match.</p>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,269 @@
+const express = require('express');
+const mysql = require('mysql2/promise');
+const axios = require('axios');
+const cors = require('cors');
+const bcrypt = require('bcrypt');
+const path = require('path');
+
+const app = express();
+const router = express.Router();
+
+app.use(cors());
+app.use(express.json());
+app.use(express.static(__dirname)); // Serves front.html statically
+
+// 1. Initialize MySQL Connection Pool
+const pool = mysql.createPool({
+    host: '127.0.0.1',
+    user: 'root',
+    password: 'Harshnew@gmail123',
+    database: 'db_leetcode', // Fixed DB name alignment
+    waitForConnections: true,
+    connectionLimit: 10
+});
+
+// Helper function: Recalculates user profile average vector and count in MySQL
+async function refreshUserProfileVector(connection, uid) {
+    const [historyRows] = await connection.execute(`
+        SELECT q.question_vector 
+        FROM user_solved_history h
+        JOIN questions q ON h.question_number = q.question_number
+        WHERE h.uid = ?
+    `, [uid]);
+
+    if (historyRows.length === 0) return;
+
+    const vectors = historyRows.map(row => 
+        typeof row.question_vector === 'string' ? JSON.parse(row.question_vector) : row.question_vector
+    );
+
+    const vectorLength = vectors[0].length;
+    let meanVector = new Array(vectorLength).fill(0);
+
+    for (let i = 0; i < vectorLength; i++) {
+        let sum = 0;
+        for (let j = 0; j < vectors.length; j++) {
+            sum += vectors[j][i];
+        }
+        meanVector[i] = sum / vectors.length;
+    }
+
+    await connection.execute(
+        'UPDATE users SET question_count = ?, user_vector = ? WHERE uid = ?',
+        [vectors.length, JSON.stringify(meanVector), uid]
+    );
+}
+
+// =====================================================================
+// API 1: Manual Link Addition
+// =====================================================================
+app.post('/api/add-solved', async (req, res) => {
+    const { uid, question_number } = req.body;
+    if (!uid || !question_number) {
+        return res.status(400).json({ error: "Missing uid or question_number params" });
+    }
+
+    const connection = await pool.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        const [qExists] = await connection.execute('SELECT question_number FROM questions WHERE question_number = ?', [question_number]);
+        if (qExists.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ error: "Question metadata ID not found in database bank." });
+        }
+
+        await connection.execute('INSERT IGNORE INTO user_solved_history (uid, question_number) VALUES (?, ?)', [uid, question_number]);
+        await refreshUserProfileVector(connection, uid);
+
+        await connection.commit();
+        return res.json({ success: true, message: "Problem database mapping updated." });
+    } catch (err) {
+        await connection.rollback();
+        return res.status(500).json({ error: err.message });
+    } finally {
+        connection.release();
+    }
+});
+
+// =====================================================================
+// API 2: Sync Profile via Token Hook
+// =====================================================================
+app.post('/api/sync-leetcode', async (req, res) => {
+    const { uid, cookie, csrf_token } = req.body;
+    if (!uid || !cookie) {
+        return res.status(400).json({ error: "Missing uid or session cookie strings" });
+    }
+
+    const connection = await pool.getConnection();
+    try {
+        // Forward both credentials over to Python microservice
+        const pythonResponse = await axios.post('http://127.0.0.1:8000/engine/fetch-ids', { 
+            cookie,
+            csrf_token 
+        });
+        
+        const { solved_ids } = pythonResponse.data;
+
+        if (solved_ids && solved_ids.length > 0) {
+            await connection.beginTransaction();
+
+            for (const qid of solved_ids) {
+                await connection.execute(
+                    'INSERT IGNORE INTO user_solved_history (uid, question_number) VALUES (?, ?)', 
+                    [uid, qid]
+                );
+            }
+
+            await refreshUserProfileVector(connection, uid);
+            await connection.commit();
+        }
+
+        return res.json({ success: true, synced_count: solved_ids ? solved_ids.length : 0 });
+    } catch (err) {
+        if (connection) await connection.rollback();
+        console.error(err.message);
+        return res.status(500).json({ error: "Failed to sync LeetCode solved problems." });
+    } finally {
+        connection.release();
+    }
+});
+// =====================================================================
+// API 3: Get Vector Recommendation
+// =====================================================================
+app.post('/api/get-next', async (req, res) => {
+    const { uid, difficulty, topic } = req.body;
+    if (!uid) {
+        return res.status(400).json({ error: "Missing uid validation block" });
+    }
+
+    try {
+        const [userRows] = await pool.execute('SELECT user_vector FROM users WHERE uid = ?', [uid]);
+        if (userRows.length === 0 || !userRows[0].user_vector) {
+            return res.status(400).json({ error: "User vector layout is blank. Sync profile data first." });
+        }
+        
+        const userVector = typeof userRows[0].user_vector === 'string' ? JSON.parse(userRows[0].user_vector) : userRows[0].user_vector;
+
+        let query = `
+            SELECT question_number, title, difficulty, question_vector 
+            FROM questions 
+            WHERE question_number NOT IN (
+                SELECT question_number FROM user_solved_history WHERE uid = ?
+            )
+        `;
+        let queryParams = [uid];
+
+        if (difficulty) {
+            query += " AND difficulty = ?";
+            queryParams.push(difficulty);
+        }
+
+        const [candidateRows] = await pool.execute(query, queryParams);
+        if (candidateRows.length === 0) {
+            return res.status(404).json({ message: "No uncompleted vector matches exist for these filters." });
+        }
+
+        const candidatesPayload = candidateRows.map(row => ({
+            id: row.question_number,
+            vector: typeof row.question_vector === 'string' ? JSON.parse(row.question_vector) : row.question_vector
+        }));
+
+        const pythonMatchResponse = await axios.post('http://127.0.0.1:8000/engine/calculate-similarity', {
+            user_vector: userVector,
+            candidates: candidatesPayload
+        });
+
+        const { recommended_id, score } = pythonMatchResponse.data;
+
+        const [finalProblem] = await pool.execute(
+            'SELECT question_number, title, difficulty FROM questions WHERE question_number = ?',
+            [recommended_id]
+        );
+
+        return res.json({
+            recommended_problem: finalProblem[0],
+            similarity_match: score
+        });
+
+    } catch (err) {
+        console.error(err.message);
+        return res.status(500).json({ error: "Internal microservice connection mismatch error." });
+    }
+});
+
+// =====================================================================
+// Auth Routes
+// =====================================================================
+router.post('/register', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+
+        if (!username || !password) {
+            return res.status(400).json({ message: 'Username and password required' });
+        }
+
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+        const query = `
+            INSERT INTO users (username, password_hash)
+            VALUES (?, ?)
+        `;
+
+        const [result] = await pool.execute(query, [username, hashedPassword]);
+
+        res.status(201).json({
+            status: 'success',
+            user: { uid: result.insertId, username: username }
+        });
+    } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ message: 'Username is already taken' });
+        }
+        res.status(500).json({ message: error.message });
+    }
+});
+
+router.post('/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+
+        const [rows] = await pool.execute('SELECT * FROM users WHERE username = ?', [username]);
+
+        if (rows.length === 0) {
+            return res.status(401).json({ message: 'Invalid username or password' });
+        }
+
+        const user = rows[0];
+        const isMatch = await bcrypt.compare(password, user.password_hash);
+
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Invalid username or password' });
+        }
+
+        res.status(200).json({
+            status: 'success',
+            user: {
+                uid: user.uid,
+                username: user.username,
+                question_count: user.question_count,
+                has_vector: !!user.user_vector
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Attach Router to Application Express Pipeline
+app.use(router);
+
+// Serve main landing page
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'front.html'));
+});
+
+app.listen(3000, () => {
+    console.log('🚀 Server up and listening on http://127.0.0.1:3000');
+});

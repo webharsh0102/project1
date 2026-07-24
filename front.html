@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - LeetCode RecEngine</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4">
+
+  <div class="max-w-md w-full bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 p-8">
+    
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-extrabold text-indigo-400">RecEngine 🚀</h1>
+      <p id="formSubtext" class="text-slate-400 text-sm mt-2">Sign in to access your personalized recommendations</p>
+    </div>
+
+    <!-- Toggle Tabs -->
+    <div class="flex bg-slate-900 rounded-lg p-1 mb-6 border border-slate-700">
+      <button id="tabLogin" type="button" onclick="switchTab('login')" class="flex-1 py-2 text-sm font-semibold rounded-md bg-indigo-600 text-white transition-all">Log In</button>
+      <button id="tabRegister" type="button" onclick="switchTab('register')" class="flex-1 py-2 text-sm font-semibold rounded-md text-slate-400 transition-all">Sign Up</button>
+    </div>
+
+    <!-- Auth Form -->
+    <form id="authForm" class="space-y-4">
+      
+      <div>
+        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Username</label>
+        <input type="text" id="username" required placeholder="e.g. harsh_dev" 
+               class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-slate-200 focus:outline-none focus:border-indigo-500">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Password</label>
+        <input type="password" id="password" required placeholder="••••••••" 
+               class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-slate-200 focus:outline-none focus:border-indigo-500">
+      </div>
+
+      <div id="errorMsg" class="hidden text-xs text-rose-400 bg-rose-950/50 border border-rose-800 rounded p-2 text-center"></div>
+
+      <button type="submit" id="submitBtn" 
+              class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-lg transition duration-200 shadow-lg shadow-indigo-600/30">
+        Log In
+      </button>
+
+    </form>
+  </div>
+
+  <script>
+    let mode = 'login';
+
+    function switchTab(targetMode) {
+      mode = targetMode;
+      const tabLogin = document.getElementById('tabLogin');
+      const tabRegister = document.getElementById('tabRegister');
+      const submitBtn = document.getElementById('submitBtn');
+      const subtext = document.getElementById('formSubtext');
+
+      if (mode === 'login') {
+        tabLogin.className = "flex-1 py-2 text-sm font-semibold rounded-md bg-indigo-600 text-white transition-all";
+        tabRegister.className = "flex-1 py-2 text-sm font-semibold rounded-md text-slate-400 transition-all";
+        submitBtn.textContent = "Log In";
+        subtext.textContent = "Sign in to access your personalized recommendations";
+      } else {
+        tabRegister.className = "flex-1 py-2 text-sm font-semibold rounded-md bg-indigo-600 text-white transition-all";
+        tabLogin.className = "flex-1 py-2 text-sm font-semibold rounded-md text-slate-400 transition-all";
+        submitBtn.textContent = "Create Account & Continue";
+        subtext.textContent = "Create an account to start setting up your skill vector";
+      }
+    }
+
+    document.getElementById('authForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const errorMsg = document.getElementById('errorMsg');
+
+      errorMsg.classList.add('hidden');
+
+      // Uses relative endpoint matching Express server route
+      const endpoint = mode === 'register' ? '/register' : '/login';
+      console.log("hello");
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          // Store session details globally
+          localStorage.setItem('user', JSON.stringify(data.user));
+
+          if (mode === 'register') {
+            // New user goes to initial vector setup
+            window.location.href = '/profile_setup.html';
+          } else {
+            // Existing user goes straight to dashboard/recommendations
+            window.location.href = '/frontpage2.html';
+          }
+        } else {
+          errorMsg.textContent = data.message || "Authentication failed.";
+          errorMsg.classList.remove('hidden');
+        }
+      } catch (err) {
+        errorMsg.textContent = "Server unreachable. Make sure node server.js is running.";
+        errorMsg.classList.remove('hidden');
+      }
+    });
+  </script>
+</body>
+</html>

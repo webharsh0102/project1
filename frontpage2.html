@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - LeetCode RecEngine</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+
+  <!-- Top Navbar -->
+  <nav class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <h1 class="text-2xl font-extrabold text-indigo-400">RecEngine 🚀</h1>
+      <span class="text-xs bg-indigo-950 border border-indigo-800 text-indigo-300 font-semibold px-2.5 py-1 rounded-full">ML Active</span>
+    </div>
+
+    <div class="flex items-center space-x-4">
+      <span id="navUsername" class="text-sm font-semibold text-slate-300">Welcome, Developer</span>
+      <button onclick="logout()" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-lg transition">
+        Log Out
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main Dashboard Grid -->
+  <main class="max-w-6xl mx-auto p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+
+    <!-- Left Column: User Vector Stats -->
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 space-y-6">
+      <h2 class="text-lg font-bold text-slate-200">User Skill Profile</h2>
+      
+      <div class="bg-slate-900 rounded-xl p-4 border border-slate-700 space-y-3">
+        <div class="flex justify-between items-center text-sm">
+          <span class="text-slate-400">User ID:</span>
+          <span id="statUid" class="font-mono text-indigo-400 font-bold">#--</span>
+        </div>
+        <div class="flex justify-between items-center text-sm">
+          <span class="text-slate-400">Solved Count:</span>
+          <span id="statCount" class="font-bold text-slate-200">0</span>
+        </div>
+        <div class="flex justify-between items-center text-sm">
+          <span class="text-slate-400">Vector Status:</span>
+          <span id="statVectorStatus" class="text-xs font-semibold text-amber-400 bg-amber-950/50 border border-amber-800 px-2 py-0.5 rounded">Pending</span>
+        </div>
+      </div>
+
+      <!-- Quick Solved Marker -->
+      <div class="space-y-3">
+        <h3 class="text-xs font-semibold uppercase text-slate-400 tracking-wider">Mark Problem as Solved</h3>
+        <form id="markSolvedForm" class="flex gap-2">
+          <input type="number" id="quickQNum" required placeholder="Question #" 
+                 class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+          <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-2 rounded-lg text-sm transition">
+            Save
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Right Column: Recommendation Generator -->
+    <div class="md:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl p-6 space-y-6">
+      
+      <div class="flex items-center justify-between border-b border-slate-700 pb-4">
+        <div>
+          <h2 class="text-xl font-bold text-slate-100">Next Recommended Problem</h2>
+          <p class="text-xs text-slate-400">Calculated via spatial similarity against unsolved candidate vectors.</p>
+        </div>
+
+        <!-- Filters -->
+        <div class="flex gap-2">
+          <select id="diffFilter" class="bg-slate-900 border border-slate-700 text-xs text-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500">
+            <option value="">All Difficulties</option>
+            <option value="Easy">Easy</option>
+            <option value="Medium">Medium</option>
+            <option value="Hard">Hard</option>
+          </select>
+          
+          <button onclick="fetchRecommendation()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs px-4 py-2 rounded-lg transition shadow-md shadow-emerald-600/20">
+            Get Recommendation
+          </button>
+        </div>
+      </div>
+
+      <!-- Recommendation Result Card -->
+      <div id="recCard" class="bg-slate-900 border border-slate-700 rounded-xl p-8 text-center space-y-6">
+        <div class="space-y-2">
+          <span class="text-xs font-semibold uppercase tracking-widest text-slate-500">Recommended Match</span>
+          <h3 id="recTitle" class="text-2xl font-extrabold text-slate-200">Click 'Get Recommendation' to start</h3>
+          <p id="recDifficulty" class="text-sm font-semibold text-slate-400"></p>
+        </div>
+
+        <div id="scoreContainer" class="hidden inline-flex items-center space-x-2 bg-indigo-950/80 border border-indigo-800 rounded-full px-4 py-1.5 text-xs text-indigo-300">
+          <span>Match Score:</span>
+          <span id="recScore" class="font-mono font-bold text-indigo-200">0.00</span>
+        </div>
+
+        <div id="recActions" class="hidden pt-4">
+          <button id="solveBtn" onclick="markCurrentAsSolved()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-2.5 rounded-lg text-sm transition">
+            Mark Solved & Next →
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <script>
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user || !user.uid) {
+      window.location.href = '/';
+    }
+
+    let currentRecId = null;
+
+    // Load initial user state
+    document.getElementById('navUsername').textContent = `Welcome, ${user.username}`;
+    document.getElementById('statUid').textContent = `#${user.uid}`;
+    document.getElementById('statCount').textContent = user.question_count || 0;
+    
+    if (user.has_vector) {
+      const badge = document.getElementById('statVectorStatus');
+      badge.textContent = "Active";
+      badge.className = "text-xs font-semibold text-emerald-400 bg-emerald-950/50 border border-emerald-800 px-2 py-0.5 rounded";
+    }
+
+    // Fetch Recommendation from API 3
+    async function fetchRecommendation() {
+      const difficulty = document.getElementById('diffFilter').value;
+      const recTitle = document.getElementById('recTitle');
+      const recDiff = document.getElementById('recDifficulty');
+      const recScore = document.getElementById('recScore');
+      const scoreContainer = document.getElementById('scoreContainer');
+      const recActions = document.getElementById('recActions');
+
+      recTitle.textContent = "Calculating similarity vectors...";
+      recDiff.textContent = "";
+
+      try {
+        const res = await fetch('/api/get-next', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: user.uid, difficulty })
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.recommended_problem) {
+          const prob = data.recommended_problem;
+          currentRecId = prob.question_number;
+
+          recTitle.textContent = `#${prob.question_number} - ${prob.title}`;
+          recDiff.textContent = `Difficulty: ${prob.difficulty}`;
+          recScore.textContent = (data.similarity_match * 100).toFixed(2) + "%";
+
+          scoreContainer.classList.remove('hidden');
+          recActions.classList.remove('hidden');
+        } else {
+          recTitle.textContent = data.message || data.error || "No recommendation found.";
+          scoreContainer.classList.add('hidden');
+          recActions.classList.add('hidden');
+        }
+      } catch (err) {
+        recTitle.textContent = "Error connecting to recommendation service.";
+      }
+    }
+
+    // Mark current recommendation as solved
+    async function markCurrentAsSolved() {
+      if (!currentRecId) return;
+      await submitSolved(currentRecId);
+      fetchRecommendation();
+    }
+
+    // Mark Quick Solved Form
+    document.getElementById('markSolvedForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const qNum = parseInt(document.getElementById('quickQNum').value);
+      await submitSolved(qNum);
+      document.getElementById('quickQNum').value = '';
+    });
+
+    async function submitSolved(question_number) {
+      try {
+        const res = await fetch('/api/add-solved', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: user.uid, question_number })
+        });
+        if (res.ok) {
+          user.question_count = (user.question_count || 0) + 1;
+          user.has_vector = true;
+          localStorage.setItem('user', JSON.stringify(user));
+          document.getElementById('statCount').textContent = user.question_count;
+        }
+      } catch (err) {
+        console.error("Failed to mark solved", err);
+      }
+    }
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = '/';
+    }
+  </script>
+</body>
+</html>
