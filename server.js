@@ -57,6 +57,30 @@ async function refreshUserProfileVector(connection, uid) {
 // =====================================================================
 // API 1: Manual Link Addition
 // =====================================================================
+// GET /api/is-synced/:uid
+app.get('/api/is-synced/:uid', async (req, res) => {
+  const { uid } = req.params;
+
+  try {
+    // 1. Query the database for the user's synced column
+    // (Adjust the query syntax below based on your DB library: mysql2, pg, sqlite3, knex, etc.)
+    const [rows] = await db.query('SELECT synced FROM users WHERE uid = ?', [uid]);
+
+    // 2. If user doesn't exist, return not synced
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ is_synced: false, error: "User not found" });
+    }
+
+    // 3. Check if synced equals 1
+    const isSynced = rows[0].synced === 1;
+
+    return res.json({ is_synced: isSynced });
+
+  } catch (err) {
+    console.error("Error checking sync status:", err);
+    return res.status(500).json({ is_synced: false, error: "Database query failed" });
+  }
+});
 app.post('/api/add-solved', async (req, res) => {
     const { uid, question_number } = req.body;
     if (!uid || !question_number) {
@@ -97,7 +121,7 @@ app.post('/api/sync-leetcode', async (req, res) => {
 
     const connection = await pool.getConnection();
     try {
-        // Forward both credentials over to Python microservice
+        // Forward credentials over to Python microservice
         const pythonResponse = await axios.post('http://127.0.0.1:8000/engine/fetch-ids', { 
             cookie,
             csrf_token 
@@ -105,9 +129,9 @@ app.post('/api/sync-leetcode', async (req, res) => {
         
         const { solved_ids } = pythonResponse.data;
 
-        if (solved_ids && solved_ids.length > 0) {
-            await connection.beginTransaction();
+        await connection.beginTransaction();
 
+        if (solved_ids && solved_ids.length > 0) {
             for (const qid of solved_ids) {
                 await connection.execute(
                     'INSERT IGNORE INTO user_solved_history (uid, question_number) VALUES (?, ?)', 
@@ -116,16 +140,23 @@ app.post('/api/sync-leetcode', async (req, res) => {
             }
 
             await refreshUserProfileVector(connection, uid);
-            await connection.commit();
         }
+
+        // Mark user as synced in users table
+        await connection.execute(
+            'UPDATE users SET synced = 1 WHERE uid = ?',
+            [uid]
+        );
+
+        await connection.commit();
 
         return res.json({ success: true, synced_count: solved_ids ? solved_ids.length : 0 });
     } catch (err) {
         if (connection) await connection.rollback();
-        console.error(err.message);
+        console.error("Sync Error:", err.message);
         return res.status(500).json({ error: "Failed to sync LeetCode solved problems." });
     } finally {
-        connection.release();
+        if (connection) connection.release();
     }
 });
 // =====================================================================
