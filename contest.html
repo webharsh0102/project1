@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Virtual Contest - LeetCode RecEngine</title>
+  <link rel="stylesheet" href="contest.css">
+</head>
+<body>
+
+  <div class="contest-container">
+
+    <!-- Header with big countdown timer -->
+    <header class="contest-header">
+      <h1>Virtual Contest 🏆</h1>
+      <div id="timerDisplay" class="timer">--:--:--</div>
+      <p class="subtext">1 Easy · 2 Medium · 1 Hard — solve as many as you can before time runs out</p>
+    </header>
+
+    <!-- Shown before a contest has been started -->
+    <div id="startScreen" class="panel">
+      <p>Ready to start a 2 hour virtual contest? You'll get 4 random unsolved questions matched to your level.</p>
+      <button id="startBtn" class="btn btn-primary" onclick="startContest()">Start Virtual Contest</button>
+      <p id="startError" class="error-text hidden"></p>
+    </div>
+
+    <!-- The 4 question cards, shown once a contest is active -->
+    <div id="questionGrid" class="question-grid hidden"></div>
+
+    <!-- Submit button, shown once a contest is active -->
+    <div id="submitBar" class="submit-bar hidden">
+      <button id="submitBtn" class="btn btn-success" onclick="submitContest()">Submit Contest</button>
+    </div>
+
+    <!-- Final results, shown after submit (or after time runs out) -->
+    <div id="resultsPanel" class="panel results-panel hidden"></div>
+
+  </div>
+
+  <script src="contest_app.js"></script>
+</body>
+</html>

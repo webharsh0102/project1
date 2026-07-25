@@ -7,7 +7,20 @@ import requests
 from sklearn.metrics.pairwise import cosine_similarity
 import uvicorn
 
+from topics_config import TOPIC_NAME_TO_INDEX
+
 app = FastAPI(title="LeetCode Recommendation Engine")
+
+# How much to scale a candidate's value at a boosted / suppressed topic
+# index before computing similarity. >1 pulls matching questions closer,
+# <1 pushes them further away. Tune these if boost/suppress feels too weak/strong.
+BOOST_MULTIPLIER = 1.35
+SUPPRESS_MULTIPLIER = 0.55
+
+# Extra score boost per "found difficult" click, capped so one question
+# marked difficult 20 times doesn't completely dominate every result.
+DIFFICULT_BOOST_PER_MARK = 0.08
+DIFFICULT_BOOST_MAX = 0.40
 
 
 # =====================================================================
@@ -25,9 +38,17 @@ class Candidate(BaseModel):
     vector: List[float]
 
 
+class DifficultQuestion(BaseModel):
+    id: int
+    times_marked: int
+
+
 class SimilarityRequest(BaseModel):
     user_vector: List[float]
     candidates: List[Candidate]
+    boost_topics: List[str] = []      # topic names to weight UP this request
+    suppress_topics: List[str] = []   # topic names to weight DOWN this request
+    difficult_questions: List[DifficultQuestion] = []  # questions user found difficult before
 
 
 # =====================================================================
@@ -156,6 +177,26 @@ def calculate_similarity(data: SimilarityRequest):
             status_code=400, detail="Missing vector data parameters"
         )
 
+    # Build the list of (index, multiplier) adjustments once, from the
+    # topic names the user picked this request. Unknown topic names are
+    # silently ignored rather than erroring the whole request.
+    adjustments = []
+    for name in data.boost_topics:
+        idx = TOPIC_NAME_TO_INDEX.get(name)
+        if idx is not None:
+            adjustments.append((idx, BOOST_MULTIPLIER))
+    for name in data.suppress_topics:
+        idx = TOPIC_NAME_TO_INDEX.get(name)
+        if idx is not None:
+            adjustments.append((idx, SUPPRESS_MULTIPLIER))
+
+    # Map question id -> extra score boost, from how many times the user
+    # has previously hit "Found Difficult" on that question.
+    difficult_boost_by_id = {}
+    for dq in data.difficult_questions:
+        boost = min(dq.times_marked * DIFFICULT_BOOST_PER_MARK, DIFFICULT_BOOST_MAX)
+        difficult_boost_by_id[dq.id] = boost
+
     u_matrix = np.array(user_vector).reshape(1, -1)
     best_id = None
     max_score = -1.0
@@ -163,8 +204,21 @@ def calculate_similarity(data: SimilarityRequest):
     for cand in candidates:
         if not cand.vector:
             continue
-        cand_matrix = np.array(cand.vector).reshape(1, -1)
+
+        # Scale the candidate's own vector at the chosen topic indices so
+        # boosted-topic candidates score higher and suppressed-topic
+        # candidates score lower, without touching the user's own vector.
+        cand_values = list(cand.vector)
+        for idx, multiplier in adjustments:
+            if idx < len(cand_values):
+                cand_values[idx] *= multiplier
+
+        cand_matrix = np.array(cand_values).reshape(1, -1)
         score = cosine_similarity(u_matrix, cand_matrix)[0][0]
+
+        # Nudge previously-difficult questions back up so the user
+        # eventually revisits what tripped them up before.
+        score += difficult_boost_by_id.get(cand.id, 0.0)
 
         if score > max_score:
             max_score = float(score)

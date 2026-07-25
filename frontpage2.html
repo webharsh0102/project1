@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard - LeetCode RecEngine</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="topics_frontend.js"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen">
 
@@ -18,6 +19,11 @@
     <div class="flex items-center space-x-3">
       <span id="navUsername" class="text-sm font-semibold text-slate-300 mr-2">Welcome, Developer</span>
       
+      <!-- Virtual Contest Button -->
+      <button onclick="window.location.href='/contest.html'" class="text-xs bg-amber-600 hover:bg-amber-500 text-white font-semibold px-3 py-1.5 rounded-lg transition">
+        🏆 Virtual Contest
+      </button>
+
       <!-- LeetCode Sync Button -->
       <button id="syncBtnNav" onclick="handleSyncRedirect()" class="text-xs bg-rose-600 hover:bg-rose-500 text-white font-semibold px-3 py-1.5 rounded-lg transition">
         Not Synced
@@ -87,12 +93,32 @@
             <option value="Medium">Medium</option>
             <option value="Hard">Hard</option>
           </select>
-          
+
           <button onclick="fetchRecommendation()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs px-4 py-2 rounded-lg transition shadow-md shadow-emerald-600/20">
             Get Recommendation
           </button>
         </div>
       </div>
+
+      <!-- Boost / Suppress topic pickers -->
+      <!-- These are NOT saved to the database. They only apply to the -->
+      <!-- single recommendation call made when "Get Recommendation" is clicked -->
+      <!-- (same as the difficulty filter above). -->
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Boost Topics (want more of)</label>
+          <select id="boostTopics" multiple size="5"
+                  class="w-full bg-slate-900 border border-slate-700 text-xs text-slate-300 rounded-lg px-2 py-2 focus:outline-none focus:border-emerald-500">
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Suppress Topics (want less of)</label>
+          <select id="suppressTopics" multiple size="5"
+                  class="w-full bg-slate-900 border border-slate-700 text-xs text-slate-300 rounded-lg px-2 py-2 focus:outline-none focus:border-rose-500">
+          </select>
+        </div>
+      </div>
+      <p class="text-[10px] text-slate-500 -mt-2">Ctrl/Cmd-click to select multiple topics in either list.</p>
 
       <!-- User Status / Warning Text Div -->
       <div id="userTextDiv" class="text-sm font-semibold text-center mb-2"></div>
@@ -110,9 +136,12 @@
           <span id="recScore" class="font-mono font-bold text-indigo-200">0.00</span>
         </div>
 
-        <div id="recActions" class="hidden pt-4">
+        <div id="recActions" class="hidden pt-4 flex items-center justify-center gap-3">
           <button id="solveBtn" onclick="markCurrentAsSolved()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-2.5 rounded-lg text-sm transition">
-            Mark Solved & Next →
+            ✓ Solved &amp; Next
+          </button>
+          <button id="difficultBtn" onclick="markCurrentAsDifficult()" class="bg-amber-600 hover:bg-amber-500 text-white font-semibold px-6 py-2.5 rounded-lg text-sm transition">
+            ⚠ Found Difficult &amp; Next
           </button>
         </div>
       </div>
@@ -124,6 +153,32 @@
 <script>
   let user = JSON.parse(localStorage.getItem('user'));
   let currentRecId = null;
+
+  // Fill the boost/suppress <select> lists from the shared TOPIC_NAMES array
+  // (loaded from topics_frontend.js). Runs once on page load.
+  function populateTopicSelectors() {
+    const boostSelect = document.getElementById('boostTopics');
+    const suppressSelect = document.getElementById('suppressTopics');
+    if (!boostSelect || !suppressSelect || typeof TOPIC_NAMES === 'undefined') return;
+
+    TOPIC_NAMES.forEach(topic => {
+      const boostOption = document.createElement('option');
+      boostOption.value = topic;
+      boostOption.textContent = topic;
+      boostSelect.appendChild(boostOption);
+
+      const suppressOption = document.createElement('option');
+      suppressOption.value = topic;
+      suppressOption.textContent = topic;
+      suppressSelect.appendChild(suppressOption);
+    });
+  }
+
+  // Reads the currently highlighted options out of a multi-select element
+  function getSelectedValues(selectElement) {
+    if (!selectElement) return [];
+    return Array.from(selectElement.selectedOptions).map(opt => opt.value);
+  }
   // Check if user session exists in localStorage
 if (user && user.uid) {
   const loginBtn = document.getElementById('loginBtn');
@@ -297,6 +352,8 @@ if (user && user.uid) {
     }
 
     const difficulty = document.getElementById('diffFilter').value;
+    const boost_topics = getSelectedValues(document.getElementById('boostTopics'));
+    const suppress_topics = getSelectedValues(document.getElementById('suppressTopics'));
     const recTitle = document.getElementById('recTitle');
     const recDiff = document.getElementById('recDifficulty');
     const recScore = document.getElementById('recScore');
@@ -310,7 +367,7 @@ if (user && user.uid) {
       const res = await fetch('/api/get-next', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid: user.uid, difficulty })
+        body: JSON.stringify({ uid: user.uid, difficulty, boost_topics, suppress_topics })
       });
 
       const data = await res.json();
@@ -339,6 +396,23 @@ if (user && user.uid) {
   async function markCurrentAsSolved() {
     if (!currentRecId) return;
     await submitSolved(currentRecId);
+    fetchRecommendation();
+  }
+
+  // Mark current recommendation as "found difficult" (NOT solved).
+  // Question stays unsolved but gets a priority boost in future
+  // recommendations so the user comes back to it.
+  async function markCurrentAsDifficult() {
+    if (!currentRecId || !user || !user.uid) return;
+    try {
+      await fetch('/api/mark-difficult', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid: user.uid, question_number: currentRecId })
+      });
+    } catch (err) {
+      console.error("Failed to mark difficult:", err);
+    }
     fetchRecommendation();
   }
 
@@ -379,5 +453,6 @@ if (user && user.uid) {
   }
 
   // Run initialization
+  populateTopicSelectors();
   initDashboard();
 </script>

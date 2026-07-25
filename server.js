@@ -4,6 +4,7 @@ const axios = require('axios');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const path = require('path');
+const { TOPIC_NAMES, NON_TOPIC_FEATURE_COUNT } = require('./topics_config');
 
 const app = express();
 const router = express.Router();
@@ -86,10 +87,24 @@ app.post('/api/save-manual-setup', async (req, res) => {
   }
 });
 
-// Helper function: Recalculates user profile average vector and count in MySQL
+// =====================================================================
+// Decay settings for the user vector.
+// HALF_LIFE_DAYS = how many days it takes for an old solve's influence
+// on the profile vector to drop to half its original weight.
+// Smaller number -> profile reacts faster to recent practice.
+// Larger number -> profile stays close to a flat lifetime average.
+// =====================================================================
+const HALF_LIFE_DAYS = 30;
+const DECAY_LAMBDA = Math.log(2) / HALF_LIFE_DAYS;
+
+// Helper function: Recalculates user profile vector using a DECAYING
+// weighted average (not a flat mean) and updates question_count.
+// Recently solved problems influence the profile more than old ones,
+// so the recommendation engine tracks where the user is skill-wise NOW.
 async function refreshUserProfileVector(connection, uid) {
+    // Pull each solved question's vector AND when it was solved
     const [historyRows] = await connection.execute(`
-        SELECT q.question_vector 
+        SELECT q.question_vector, h.solved_at
         FROM user_solved_history h
         JOIN questions q ON h.question_number = q.question_number
         WHERE h.uid = ?
@@ -97,24 +112,41 @@ async function refreshUserProfileVector(connection, uid) {
 
     if (historyRows.length === 0) return;
 
-    const vectors = historyRows.map(row => 
-        typeof row.question_vector === 'string' ? JSON.parse(row.question_vector) : row.question_vector
-    );
+    const now = Date.now();
+    const vectorLength = (typeof historyRows[0].question_vector === 'string'
+        ? JSON.parse(historyRows[0].question_vector)
+        : historyRows[0].question_vector).length;
 
-    const vectorLength = vectors[0].length;
-    let meanVector = new Array(vectorLength).fill(0);
+    let weightedSum = new Array(vectorLength).fill(0);
+    let totalWeight = 0;
 
-    for (let i = 0; i < vectorLength; i++) {
-        let sum = 0;
-        for (let j = 0; j < vectors.length; j++) {
-            sum += vectors[j][i];
+    for (const row of historyRows) {
+        const vector = typeof row.question_vector === 'string'
+            ? JSON.parse(row.question_vector)
+            : row.question_vector;
+
+        // Age of this solve in days
+        const solvedAt = new Date(row.solved_at).getTime();
+        const ageDays = Math.max(0, (now - solvedAt) / (1000 * 60 * 60 * 24));
+
+        // Exponential decay weight: 1.0 for a solve done today,
+        // 0.5 after HALF_LIFE_DAYS, 0.25 after 2x HALF_LIFE_DAYS, etc.
+        const weight = Math.exp(-DECAY_LAMBDA * ageDays);
+
+        for (let i = 0; i < vectorLength; i++) {
+            weightedSum[i] += vector[i] * weight;
         }
-        meanVector[i] = sum / vectors.length;
+        totalWeight += weight;
     }
+
+    // Guard against divide-by-zero (shouldn't happen, but be safe)
+    const decayedVector = totalWeight > 0
+        ? weightedSum.map(v => v / totalWeight)
+        : weightedSum;
 
     await connection.execute(
         'UPDATE users SET question_count = ?, user_vector = ? WHERE uid = ?',
-        [vectors.length, JSON.stringify(meanVector), uid]
+        [historyRows.length, JSON.stringify(decayedVector), uid]
     );
 }
 
@@ -270,7 +302,10 @@ app.post('/api/sync-leetcode', async (req, res) => {
 // API 3: Get Vector Recommendation
 // =====================================================================
 app.post('/api/get-next', async (req, res) => {
-    const { uid, difficulty, topic } = req.body;
+    // boost_topics / suppress_topics: arrays of topic name strings picked
+    // by the user AT REQUEST TIME (not saved to DB, just a filter on this
+    // one recommendation call — matches how `difficulty` already works).
+    const { uid, difficulty, topic, boost_topics = [], suppress_topics = [] } = req.body;
     if (!uid) {
         return res.status(400).json({ error: "Missing uid validation block" });
     }
@@ -309,7 +344,9 @@ app.post('/api/get-next', async (req, res) => {
 
         const pythonMatchResponse = await axios.post('http://127.0.0.1:8000/engine/calculate-similarity', {
             user_vector: userVector,
-            candidates: candidatesPayload
+            candidates: candidatesPayload,
+            boost_topics,
+            suppress_topics
         });
 
         const { recommended_id, score } = pythonMatchResponse.data;
