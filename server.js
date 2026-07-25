@@ -46,6 +46,13 @@ app.post('/api/save-manual-setup', async (req, res) => {
         'INSERT IGNORE INTO user_solved_history (uid, question_number) VALUES ?',
         [values]
       );
+
+      // These are now solved, so clear any "found difficult" rows for them
+      await connection.query(
+        'DELETE FROM user_difficult_history WHERE uid = ? AND question_number IN (?)',
+        [uid, questions]
+      );
+
       await refreshUserProfileVector(connection, uid);
 
       // 2. Mark the user as synced in the users table
@@ -177,6 +184,96 @@ app.get('/api/is-synced/:uid', async (req, res) => {
     return res.status(500).json({ is_synced: false, error: "Database query failed" });
   }
 });
+// =====================================================================
+// API: Mark a question as "Found Difficult"
+// Increments times_marked if it was already marked before, instead of
+// creating duplicate rows. This question is NOT added to
+// user_solved_history, so it still shows up as unsolved/recommendable,
+// just with a priority boost (see /api/get-next below).
+// =====================================================================
+app.post('/api/mark-difficult', async (req, res) => {
+    const { uid, question_number } = req.body;
+    if (!uid || !question_number) {
+        return res.status(400).json({ error: "Missing uid or question_number params" });
+    }
+
+    try {
+        const [qExists] = await pool.execute(
+            'SELECT question_number FROM questions WHERE question_number = ?',
+            [question_number]
+        );
+        if (qExists.length === 0) {
+            return res.status(404).json({ error: "Question metadata ID not found in database bank." });
+        }
+
+        // Don't let an already-solved question get marked difficult —
+        // solved always wins, keeps the two tables mutually exclusive.
+        const [alreadySolved] = await pool.execute(
+            'SELECT 1 FROM user_solved_history WHERE uid = ? AND question_number = ?',
+            [uid, question_number]
+        );
+        if (alreadySolved.length > 0) {
+            return res.status(400).json({ error: "This question is already marked solved." });
+        }
+
+        await pool.execute(
+            `INSERT INTO user_difficult_history (uid, question_number)
+             VALUES (?, ?)
+             ON DUPLICATE KEY UPDATE times_marked = times_marked + 1, marked_at = CURRENT_TIMESTAMP`,
+            [uid, question_number]
+        );
+
+        return res.json({ success: true, message: "Question marked as difficult." });
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+// POST /api/unmark-solved — undoes a solved mark (removes it from
+// user_solved_history and refreshes the profile vector). Used by the
+// Virtual Contest page's toggle buttons, but safe to call anywhere.
+app.post('/api/unmark-solved', async (req, res) => {
+    const { uid, question_number } = req.body;
+    if (!uid || !question_number) {
+        return res.status(400).json({ error: "Missing uid or question_number params" });
+    }
+
+    const connection = await pool.getConnection();
+    try {
+        await connection.beginTransaction();
+        await connection.execute(
+            'DELETE FROM user_solved_history WHERE uid = ? AND question_number = ?',
+            [uid, question_number]
+        );
+        await refreshUserProfileVector(connection, uid);
+        await connection.commit();
+        return res.json({ success: true });
+    } catch (err) {
+        await connection.rollback();
+        return res.status(500).json({ error: err.message });
+    } finally {
+        connection.release();
+    }
+});
+
+// POST /api/unmark-difficult — undoes a "found difficult" mark
+app.post('/api/unmark-difficult', async (req, res) => {
+    const { uid, question_number } = req.body;
+    if (!uid || !question_number) {
+        return res.status(400).json({ error: "Missing uid or question_number params" });
+    }
+
+    try {
+        await pool.execute(
+            'DELETE FROM user_difficult_history WHERE uid = ? AND question_number = ?',
+            [uid, question_number]
+        );
+        return res.json({ success: true });
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
 app.post('/api/add-solved', async (req, res) => {
     const { uid, question_number } = req.body;
     if (!uid || !question_number) {
@@ -194,6 +291,14 @@ app.post('/api/add-solved', async (req, res) => {
         }
 
         await connection.execute('INSERT IGNORE INTO user_solved_history (uid, question_number) VALUES (?, ?)', [uid, question_number]);
+
+        // A solved question should no longer count as "difficult" —
+        // clear any prior difficult-history row for this (uid, question).
+        await connection.execute(
+            'DELETE FROM user_difficult_history WHERE uid = ? AND question_number = ?',
+            [uid, question_number]
+        );
+
         await refreshUserProfileVector(connection, uid);
 
         await connection.commit();
@@ -276,6 +381,11 @@ app.post('/api/sync-leetcode', async (req, res) => {
                     'INSERT IGNORE INTO user_solved_history (uid, question_number) VALUES (?, ?)', 
                     [uid, qid]
                 );
+                // Solved via sync now, so it's no longer "difficult"
+                await connection.execute(
+                    'DELETE FROM user_difficult_history WHERE uid = ? AND question_number = ?',
+                    [uid, qid]
+                );
             }
 
             await refreshUserProfileVector(connection, uid);
@@ -337,6 +447,17 @@ app.post('/api/get-next', async (req, res) => {
             return res.status(404).json({ message: "No uncompleted vector matches exist for these filters." });
         }
 
+        // Pull this user's "found difficult" history so struggled-with
+        // questions can be nudged back up the recommendation list.
+        const [difficultRows] = await pool.execute(
+            'SELECT question_number, times_marked FROM user_difficult_history WHERE uid = ?',
+            [uid]
+        );
+        const difficult_questions = difficultRows.map(row => ({
+            id: row.question_number,
+            times_marked: row.times_marked
+        }));
+
         const candidatesPayload = candidateRows.map(row => ({
             id: row.question_number,
             vector: typeof row.question_vector === 'string' ? JSON.parse(row.question_vector) : row.question_vector
@@ -346,7 +467,8 @@ app.post('/api/get-next', async (req, res) => {
             user_vector: userVector,
             candidates: candidatesPayload,
             boost_topics,
-            suppress_topics
+            suppress_topics,
+            difficult_questions
         });
 
         const { recommended_id, score } = pythonMatchResponse.data;
@@ -364,6 +486,64 @@ app.post('/api/get-next', async (req, res) => {
     } catch (err) {
         console.error(err.message);
         return res.status(500).json({ error: "Internal microservice connection mismatch error." });
+    }
+});
+
+// =====================================================================
+// VIRTUAL CONTEST FEATURE
+// No new tables. This just picks 4 random UNSOLVED questions (1 easy,
+// 2 medium, 1 hard). The timer runs entirely in the browser. When the
+// user marks a question solved/difficult during the contest, the page
+// calls the SAME /api/add-solved and /api/mark-difficult endpoints
+// used everywhere else — so it's always the real, single source of
+// truth (user_solved_history / user_difficult_history), and a question
+// can never be suggested again once solved, contest or not.
+// =====================================================================
+
+// Helper: picks `count` random UNSOLVED questions of a given difficulty
+async function pickRandomUnsolved(uid, difficulty, count) {
+    const [rows] = await pool.execute(
+        `SELECT question_number, title, difficulty FROM questions
+         WHERE difficulty = ?
+           AND question_number NOT IN (
+               SELECT question_number FROM user_solved_history WHERE uid = ?
+           )
+         ORDER BY RAND()
+         LIMIT ${Number(count)}`,
+        [difficulty, uid]
+    );
+    return rows;
+}
+
+// POST /api/contest/generate — returns 4 fresh unsolved questions
+// (1 easy, 2 medium, 1 hard). Nothing is written to the database here;
+// it's just a selection. Marking happens through the existing
+// add-solved / mark-difficult endpoints as the user works through them.
+app.post('/api/contest/generate', async (req, res) => {
+    const { uid } = req.body;
+    if (!uid) {
+        return res.status(400).json({ error: "Missing uid" });
+    }
+
+    try {
+        const easy = await pickRandomUnsolved(uid, 'Easy', 1);
+        const medium = await pickRandomUnsolved(uid, 'Medium', 2);
+        const hard = await pickRandomUnsolved(uid, 'Hard', 1);
+
+        if (easy.length < 1 || medium.length < 2 || hard.length < 1) {
+            return res.status(404).json({ error: "Not enough unsolved questions left to build a contest (need 1 easy, 2 medium, 1 hard)." });
+        }
+
+        return res.json({
+            questions: [
+                { ...easy[0], slot: 'easy' },
+                { ...medium[0], slot: 'medium_1' },
+                { ...medium[1], slot: 'medium_2' },
+                { ...hard[0], slot: 'hard' }
+            ]
+        });
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
     }
 });
 
