@@ -3,269 +3,75 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Setup Profile - LeetCode RecEngine</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>Setup Profile - RecEngine</title>
+  <link rel="stylesheet" href="setup.css">
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4">
+<body>
 
-  <div class="max-w-xl w-full bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 p-8 space-y-8">
-    
-    <!-- Header -->
-    <div class="text-center">
-      <h1 class="text-3xl font-extrabold text-indigo-400">Build Your Skill Vector 🎯</h1>
-      <p class="text-slate-400 text-sm mt-2">Seed your recommendation engine so we can calculate your starting skill profile.</p>
+  <div class="setup-card">
+
+    <div class="setup-header">
+      <h1>Build Your Skill Vector <span class="accent">🎯</span></h1>
+      <p>Seed your recommendation engine so we can calculate your starting skill profile.</p>
     </div>
 
-    <!-- Feedback Banner -->
-    <div id="alertBox" class="hidden text-xs rounded-lg p-3 text-center border"></div>
+    <div id="alertBox" class="alert-banner hidden"></div>
 
-    <!-- Option A: Sync via LeetCode Credentials -->
-    <div class="bg-slate-900 border border-slate-700 rounded-xl p-5 space-y-4">
-      <div class="flex items-center space-x-2">
-        <span class="text-indigo-400 font-bold text-lg">Option 1</span>
-        <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Sync All LeetCode Solved Problems</h2>
+    <!-- Option 1: Sync via LeetCode credentials -->
+    <section class="option-block">
+      <div class="option-title">
+        <span class="option-number">Option 1</span>
+        <h2>Sync All LeetCode Solved Problems</h2>
       </div>
-      <p class="text-xs text-slate-400">Provide your session tokens from browser DevTools (Application &rarr; Cookies &rarr; leetcode.com) to automatically fetch all your solved questions.</p>
-      
-      <div class="space-y-3">
-        <div>
-          <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">LEETCODE_SESSION</label>
-          <input type="text" id="sessionInput" placeholder="eyJhbGciOiJIUzI1Ni..." 
-                 class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-mono">
-        </div>
+      <p class="option-desc">Provide your session tokens from browser DevTools (Application &rarr; Cookies &rarr; leetcode.com) to automatically fetch all your solved questions.</p>
 
-        <div>
-          <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">CSRF_TOKEN</label>
-          <input type="text" id="csrfInput" placeholder="oPgVGpsvK8BCIbg..." 
-                 class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-mono">
-        </div>
-
-        <button id="syncBtn" onclick="syncLeetCode()" 
-                class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-lg transition text-sm shadow-md">
-          Fetch & Sync All Solved Questions
-        </button>
+      <div class="field">
+        <label for="sessionInput">LEETCODE_SESSION</label>
+        <input type="text" id="sessionInput" placeholder="eyJhbGciOiJIUzI1Ni..." class="mono">
       </div>
-    </div>
-
-    <div class="relative flex py-1 items-center">
-      <div class="flex-grow border-t border-slate-700"></div>
-      <span class="flex-shrink mx-4 text-xs font-semibold uppercase text-slate-500">Or Add Manually</span>
-      <div class="flex-grow border-t border-slate-700"></div>
-    </div>
-
-    <!-- Option B: Manual Add Problem -->
-    <div class="bg-slate-900 border border-slate-700 rounded-xl p-5 space-y-4">
-      <div class="flex items-center space-x-2">
-        <span class="text-indigo-400 font-bold text-lg">Option 2</span>
-        <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Add Solved Questions</h2>
+      <div class="field">
+        <label for="csrfInput">CSRF_TOKEN</label>
+        <input type="text" id="csrfInput" placeholder="oPgVGpsvK8BCIbg..." class="mono">
       </div>
-      
-      <form id="addSolvedForm" class="flex gap-2">
-        <input type="number" id="questionNum" required placeholder="Question # (e.g. 1)" 
-               class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
-        <button type="submit" class="bg-slate-700 hover:bg-slate-600 text-white font-semibold px-5 py-2 rounded-lg transition text-sm">
-          Add
-        </button>
+
+      <button id="syncBtn" class="btn btn-primary btn-block" onclick="syncLeetCode()">Fetch &amp; Sync All Solved Questions</button>
+    </section>
+
+    <div class="divider"><span>Or Add Manually</span></div>
+
+    <!-- Option 2: Manual add -->
+    <section class="option-block">
+      <div class="option-title">
+        <span class="option-number">Option 2</span>
+        <h2>Add Solved Questions</h2>
+      </div>
+
+      <form id="addSolvedForm" class="inline-form">
+        <input type="number" id="questionNum" required placeholder="Question # (e.g. 1)">
+        <button type="submit" class="btn btn-secondary">Add</button>
       </form>
 
-      <!-- Solved Pool Badges -->
-      <div>
-        <span class="text-xs text-slate-400 font-semibold uppercase">Added Questions:</span>
-        <div id="addedList" class="flex flex-wrap gap-2 mt-2">
-          <span class="text-xs text-slate-500 italic">No questions added yet</span>
+      <div class="badge-block">
+        <span class="badge-label">Added Questions:</span>
+        <div id="addedList" class="badge-list">
+          <span class="empty-note">No questions added yet</span>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- add box to check if user have no question till now  -->
+    <div class="divider"><span>Or Mark Down as Not Solved</span></div>
 
-     <div class="relative flex py-1 items-center">
-      <div class="flex-grow border-t border-slate-700"></div>
-      <span class="flex-shrink mx-4 text-xs font-semibold uppercase text-slate-500">Or Mark down as Not Solved</span>
-      <div class="flex-grow border-t border-slate-700"></div>
-    </div>
-
-
-    <!--divider-->
-
-
-    <div class="space-y-4">
-  <!-- Checkbox Container -->
-  <div class="flex items-center space-x-3 bg-slate-900/60 border border-slate-700 rounded-xl p-3.5">
-    <input 
-      type="checkbox" 
-      id="noSolvedCheckbox" 
-      onchange="toggleNoSolvedState()"
-      class="w-4 h-4 text-indigo-600 bg-slate-800 border-slate-600 rounded focus:ring-indigo-500 focus:ring-offset-slate-900 cursor-pointer"
-    >
-    <label for="noSolvedCheckbox" class="text-xs text-slate-300 font-medium cursor-pointer select-none">
-      I haven't solved any LeetCode questions yet (Start with fresh profile)
+    <label class="checkbox-row" for="noSolvedCheckbox">
+      <input type="checkbox" id="noSolvedCheckbox" onchange="toggleNoSolvedState()">
+      <span>I haven't solved any LeetCode questions yet (start with a fresh profile)</span>
     </label>
-  </div>
 
-
-    <!-- Final Proceed Action -->
-    <button onclick="finishSetup()" 
-            class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-lg transition shadow-lg shadow-emerald-600/20 text-base">
-      Go to Dashboard & Get Recommendations →
+    <button class="btn btn-success btn-block btn-large" onclick="finishSetup()">
+      Go to Dashboard &amp; Get Recommendations →
     </button>
 
   </div>
 
-  <script>
-    const user = JSON.parse(localStorage.getItem('user'));
-    
-
-    const addedQuestions = new Set();
-
-    function showAlert(msg, isSuccess = true) {
-      const box = document.getElementById('alertBox');
-      box.className = `text-xs rounded-lg p-3 text-center border ${
-        isSuccess 
-          ? 'bg-emerald-950/50 border-emerald-800 text-emerald-300' 
-          : 'bg-rose-950/50 border-rose-800 text-rose-300'
-      }`;
-      box.textContent = msg;
-      box.classList.remove('hidden');
-    }
-
-    // Handle Manual Problem Add
-    document.getElementById('addSolvedForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const qNum = parseInt(document.getElementById('questionNum').value);
-      
-      try {
-        const res = await fetch('/api/add-solved', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ uid: user.uid, question_number: qNum })
-        });
-        const data = await res.json();
-
-        if (res.ok) {
-          addedQuestions.add(qNum);
-          updateQuestionBadges();
-          showAlert(`Added problem #${qNum} to your profile!`);
-          document.getElementById('questionNum').value = '';
-        } else {
-          showAlert(data.error || "Failed to add question", false);
-        }
-      } catch (err) {
-        showAlert("Server connection failed.", false);
-      }
-    });
-
-    // Handle Sync via Credentials
-    async function syncLeetCode() {
-      const session = document.getElementById('sessionInput').value.trim();
-      const csrf = document.getElementById('csrfInput').value.trim();
-
-      if (!session || !csrf) {
-        return showAlert("Please enter both LEETCODE_SESSION and CSRF_TOKEN.", false);
-      }
-
-      showAlert("Fetching all solved problems from LeetCode... this may take a few seconds.", true);
-
-      try {
-        const res = await fetch('/api/sync-leetcode', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            uid: user.uid, 
-            cookie: `LEETCODE_SESSION=${session}; csrftoken=${csrf}`,
-            csrf_token: csrf 
-          })
-        });
-        const data = await res.json();
-
-        if (res.ok) {
-          showAlert(`Successfully fetched and synced ${data.synced_count} solved questions!`);
-        } else {
-          showAlert(data.error || "Sync failed.", false);
-        }
-      } catch (err) {
-        showAlert("Error connecting to server pipeline.", false);
-      }
-    }
-
-    function updateQuestionBadges() {
-      const container = document.getElementById('addedList');
-      if (addedQuestions.size === 0) {
-        container.innerHTML = '<span class="text-xs text-slate-500 italic">No questions added yet</span>';
-        return;
-      }
-      container.innerHTML = Array.from(addedQuestions).map(q => 
-        `<span class="bg-indigo-900/60 border border-indigo-700 text-indigo-200 text-xs font-mono font-bold px-2.5 py-1 rounded-md">#${q}</span>`
-      ).join('');
-    }
-
-
-
-    async function finishSetup() {
-  const checkbox = document.getElementById('noSolvedCheckbox');
-  const isChecked = checkbox && checkbox.checked;
-  const questionList = Array.from(addedQuestions); // Array of manual questions [1, 15, 42...]
-
-  // Validate user session
-  if (!user || !user.uid) {
-    alert("User session not found. Please log in again.");
-    return;
-  }
-
-  try {
-    // CASE 1: User added manual questions -> Call API to batch save questions & mark synced
-    if (questionList.length > 0) {
-      showAlert("Saving manual questions and updating profile...", true);
-
-      const response = await fetch('/api/save-manual-setup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          uid: user.uid, 
-          questions: questionList 
-        })
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        console.error("Manual question batch save failed:", data.error);
-        return showAlert(data.error || "Failed to save questions.", false);
-      }
-      // Persist state change to localStorage
-      user.synced = 1;
-      localStorage.setItem('user', JSON.stringify(user));
-
-      
-    } 
-    // CASE 2: No manual questions added, but "Not Solved" box is marked -> Call direct mark-synced API
-    else if (isChecked) {
-      showAlert("Setting up fresh profile status...", true);
-
-      const response = await fetch('/api/mark-synced', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid: user.uid })
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        console.error("Marking synced failed:", data.error);
-        return showAlert(data.error || "Failed to update sync status.", false);
-      }
-      // Persist state change to localStorage
-      user.synced = 1;
-      localStorage.setItem('user', JSON.stringify(user));
-
-
-    }
-  } catch (error) {
-    console.error("Error during finishSetup execution:", error);
-    return showAlert("Network error while completing setup.", false);
-  }
-
-  // Redirect to dashboard
-  window.location.href = '/frontpage2.html';
-}
-  </script>
+  <script src="setup.js"></script>
 </body>
 </html>

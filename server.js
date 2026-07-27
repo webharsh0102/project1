@@ -161,6 +161,40 @@ async function refreshUserProfileVector(connection, uid) {
 // API 1: Manual Link Addition
 // =====================================================================
 // GET /api/is-synced/:uid
+// GET /api/user/:uid — returns the LATEST user stats from the DB.
+// The dashboard calls this on every page load so the solved count,
+// difficult count, and vector status are always fresh, never stale
+// localStorage data.
+app.get('/api/user/:uid', async (req, res) => {
+    const { uid } = req.params;
+    try {
+        const [userRows] = await pool.execute(
+            'SELECT uid, username, question_count, user_vector, synced FROM users WHERE uid = ?',
+            [uid]
+        );
+        if (userRows.length === 0) {
+            return res.status(404).json({ error: "User not found" });
+        }
+        const user = userRows[0];
+
+        const [difficultRows] = await pool.execute(
+            'SELECT COUNT(*) AS count FROM user_difficult_history WHERE uid = ?',
+            [uid]
+        );
+
+        return res.json({
+            uid: user.uid,
+            username: user.username,
+            question_count: user.question_count || 0,
+            has_vector: !!user.user_vector,
+            synced: user.synced === 1,
+            difficult_count: difficultRows[0].count
+        });
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
 app.get('/api/is-synced/:uid', async (req, res) => {
   const { uid } = req.params;
 

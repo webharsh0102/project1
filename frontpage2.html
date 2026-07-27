@@ -3,456 +3,119 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard - LeetCode RecEngine</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="topics_frontend.js"></script>
+  <title>Dashboard - RecEngine</title>
+  <link rel="stylesheet" href="dashboard.css">
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen">
+<body>
 
   <!-- Top Navbar -->
-  <nav class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex items-center justify-between">
-    <div class="flex items-center space-x-3">
-      <h1 class="text-2xl font-extrabold text-indigo-400">RecEngine 🚀</h1>
-      <span class="text-xs bg-indigo-950 border border-indigo-800 text-indigo-300 font-semibold px-2.5 py-1 rounded-full">ML Active</span>
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <h1>RecEngine <span class="accent">🚀</span></h1>
+      <span class="pill pill-active">ML Active</span>
     </div>
 
-    <div class="flex items-center space-x-3">
-      <span id="navUsername" class="text-sm font-semibold text-slate-300 mr-2">Welcome, Developer</span>
-      
-      <!-- Virtual Contest Button -->
-      <button onclick="window.location.href='/contest.html'" class="text-xs bg-amber-600 hover:bg-amber-500 text-white font-semibold px-3 py-1.5 rounded-lg transition">
-        🏆 Virtual Contest
-      </button>
-
-      <!-- LeetCode Sync Button -->
-      <button id="syncBtnNav" onclick="handleSyncRedirect()" class="text-xs bg-rose-600 hover:bg-rose-500 text-white font-semibold px-3 py-1.5 rounded-lg transition">
-        Not Synced
-      </button>
-
-      <!-- Login Button -->
-      <button id="loginBtn" onclick="handleLoginClick()" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-3 py-1.5 rounded-lg transition">
-  Log In
-</button>
-
-      <!-- Logout Button -->
-      <button onclick="logout()" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-lg transition">
-        Log Out
-      </button>
+    <div class="navbar-actions">
+      <span id="navUsername" class="nav-username">Welcome, Developer</span>
+      <button id="contestBtn" class="btn btn-contest" onclick="window.location.href='/contest.html'">🏆 Virtual Contest</button>
+      <button id="syncBtnNav" class="btn btn-danger" onclick="handleSyncRedirect()">Not Synced</button>
+      <button id="loginBtn" class="btn btn-primary" onclick="handleLoginClick()">Log In</button>
+      <button class="btn btn-ghost" onclick="logout()">Log Out</button>
     </div>
   </nav>
 
-  <!-- Main Dashboard Grid -->
-  <main class="max-w-6xl mx-auto p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+  <main class="dashboard-grid">
 
     <!-- Left Column: User Vector Stats -->
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 space-y-6">
-      <h2 class="text-lg font-bold text-slate-200">User Skill Profile</h2>
-      
-      <div class="bg-slate-900 rounded-xl p-4 border border-slate-700 space-y-3">
-        <div class="flex justify-between items-center text-sm">
-          <span class="text-slate-400">User ID:</span>
-          <span id="statUid" class="font-mono text-indigo-400 font-bold">#--</span>
+    <section class="panel">
+      <h2>User Skill Profile</h2>
+
+      <div class="stat-block">
+        <div class="stat-row">
+          <span class="stat-label">User ID</span>
+          <span id="statUid" class="stat-value accent-text">#--</span>
         </div>
-        <div class="flex justify-between items-center text-sm">
-          <span class="text-slate-400">Solved Count:</span>
-          <span id="statCount" class="font-bold text-slate-200">0</span>
+        <div class="stat-row">
+          <span class="stat-label">Solved Count</span>
+          <span id="statCount" class="stat-value">0</span>
         </div>
-        <div class="flex justify-between items-center text-sm">
-          <span class="text-slate-400">Vector Status:</span>
-          <span id="statVectorStatus" class="text-xs font-semibold text-amber-400 bg-amber-950/50 border border-amber-800 px-2 py-0.5 rounded">Pending</span>
+        <div class="stat-row">
+          <span class="stat-label">Found Difficult</span>
+          <span id="statDifficult" class="stat-value">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Vector Status</span>
+          <span id="statVectorStatus" class="pill pill-pending">Pending</span>
         </div>
       </div>
 
-      <!-- Quick Solved Marker -->
-      <div class="space-y-3">
-        <h3 class="text-xs font-semibold uppercase text-slate-400 tracking-wider">Mark Problem as Solved</h3>
-        <form id="markSolvedForm" class="flex gap-2">
-          <input type="number" id="quickQNum" required placeholder="Question #" 
-                 class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
-          <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-2 rounded-lg text-sm transition">
-            Save
-          </button>
+      <div class="section-block">
+        <h3>Mark Problem as Solved</h3>
+        <form id="markSolvedForm" class="inline-form">
+          <input type="number" id="quickQNum" required placeholder="Question #">
+          <button type="submit" class="btn btn-primary">Save</button>
         </form>
       </div>
-    </div>
+    </section>
 
     <!-- Right Column: Recommendation Generator -->
-    <div class="md:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl p-6 space-y-6">
-      
-      <div class="flex items-center justify-between border-b border-slate-700 pb-4">
+    <section class="panel panel-wide">
+
+      <div class="panel-header">
         <div>
-          <h2 class="text-xl font-bold text-slate-100">Next Recommended Problem</h2>
-          <p class="text-xs text-slate-400">Calculated via spatial similarity against unsolved candidate vectors.</p>
+          <h2>Next Recommended Problem</h2>
+          <p class="panel-subtext">Calculated via spatial similarity against unsolved candidate vectors.</p>
         </div>
 
-        <!-- Filters -->
-        <div class="flex gap-2">
-          <select id="diffFilter" class="bg-slate-900 border border-slate-700 text-xs text-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500">
+        <div class="filter-row">
+          <select id="diffFilter">
             <option value="">All Difficulties</option>
             <option value="Easy">Easy</option>
             <option value="Medium">Medium</option>
             <option value="Hard">Hard</option>
           </select>
-
-          <button onclick="fetchRecommendation()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs px-4 py-2 rounded-lg transition shadow-md shadow-emerald-600/20">
-            Get Recommendation
-          </button>
+          <button class="btn btn-success" onclick="fetchRecommendation()">Get Recommendation</button>
         </div>
       </div>
 
-      <!-- Boost / Suppress topic pickers -->
-      <!-- These are NOT saved to the database. They only apply to the -->
-      <!-- single recommendation call made when "Get Recommendation" is clicked -->
-      <!-- (same as the difficulty filter above). -->
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Boost Topics (want more of)</label>
-          <select id="boostTopics" multiple size="5"
-                  class="w-full bg-slate-900 border border-slate-700 text-xs text-slate-300 rounded-lg px-2 py-2 focus:outline-none focus:border-emerald-500">
-          </select>
+      <!-- Boost / Suppress topic pickers (request-time only, not saved) -->
+      <div class="topic-picker-grid">
+        <div class="field">
+          <label for="boostTopics">Boost Topics (want more of)</label>
+          <select id="boostTopics" multiple size="5"></select>
         </div>
-        <div>
-          <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Suppress Topics (want less of)</label>
-          <select id="suppressTopics" multiple size="5"
-                  class="w-full bg-slate-900 border border-slate-700 text-xs text-slate-300 rounded-lg px-2 py-2 focus:outline-none focus:border-rose-500">
-          </select>
+        <div class="field">
+          <label for="suppressTopics">Suppress Topics (want less of)</label>
+          <select id="suppressTopics" multiple size="5"></select>
         </div>
       </div>
-      <p class="text-[10px] text-slate-500 -mt-2">Ctrl/Cmd-click to select multiple topics in either list.</p>
+      <p class="hint-text">Ctrl/Cmd-click to select multiple topics in either list.</p>
 
-      <!-- User Status / Warning Text Div -->
-      <div id="userTextDiv" class="text-sm font-semibold text-center mb-2"></div>
+      <div id="userTextDiv" class="user-text-msg"></div>
 
-      <!-- Recommendation Result Card -->
-      <div id="recCard" class="bg-slate-900 border border-slate-700 rounded-xl p-8 text-center space-y-6">
-        <div class="space-y-2">
-          <span class="text-xs font-semibold uppercase tracking-widest text-slate-500">Recommended Match</span>
-          <h3 id="recTitle" class="text-2xl font-extrabold text-slate-200">Click 'Get Recommendation' to start</h3>
-          <p id="recDifficulty" class="text-sm font-semibold text-slate-400"></p>
+      <div id="recCard" class="rec-card">
+        <div class="rec-card-top">
+          <span class="rec-label">Recommended Match</span>
+          <h3 id="recTitle">Click 'Get Recommendation' to start</h3>
+          <p id="recDifficulty" class="rec-difficulty"></p>
         </div>
 
-        <div id="scoreContainer" class="hidden inline-flex items-center space-x-2 bg-indigo-950/80 border border-indigo-800 rounded-full px-4 py-1.5 text-xs text-indigo-300">
+        <div id="scoreContainer" class="score-pill hidden">
           <span>Match Score:</span>
-          <span id="recScore" class="font-mono font-bold text-indigo-200">0.00</span>
+          <span id="recScore" class="mono">0.00</span>
         </div>
 
-        <div id="recActions" class="hidden pt-4 flex items-center justify-center gap-3">
-          <button id="solveBtn" onclick="markCurrentAsSolved()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-2.5 rounded-lg text-sm transition">
-            ✓ Solved &amp; Next
-          </button>
-          <button id="difficultBtn" onclick="markCurrentAsDifficult()" class="bg-amber-600 hover:bg-amber-500 text-white font-semibold px-6 py-2.5 rounded-lg text-sm transition">
-            ⚠ Found Difficult &amp; Next
-          </button>
+        <div id="recActions" class="rec-actions hidden">
+          <button id="solveBtn" class="btn btn-primary" onclick="markCurrentAsSolved()">✓ Solved &amp; Next</button>
+          <button id="difficultBtn" class="btn btn-warning" onclick="markCurrentAsDifficult()">⚠ Found Difficult &amp; Next</button>
         </div>
       </div>
 
-    </div>
+    </section>
 
   </main>
 
-<script>
-  let user = JSON.parse(localStorage.getItem('user'));
-  let currentRecId = null;
-
-  // Fill the boost/suppress <select> lists from the shared TOPIC_NAMES array
-  // (loaded from topics_frontend.js). Runs once on page load.
-  function populateTopicSelectors() {
-    const boostSelect = document.getElementById('boostTopics');
-    const suppressSelect = document.getElementById('suppressTopics');
-    if (!boostSelect || !suppressSelect || typeof TOPIC_NAMES === 'undefined') return;
-
-    TOPIC_NAMES.forEach(topic => {
-      const boostOption = document.createElement('option');
-      boostOption.value = topic;
-      boostOption.textContent = topic;
-      boostSelect.appendChild(boostOption);
-
-      const suppressOption = document.createElement('option');
-      suppressOption.value = topic;
-      suppressOption.textContent = topic;
-      suppressSelect.appendChild(suppressOption);
-    });
-  }
-
-  // Reads the currently highlighted options out of a multi-select element
-  function getSelectedValues(selectElement) {
-    if (!selectElement) return [];
-    return Array.from(selectElement.selectedOptions).map(opt => opt.value);
-  }
-  // Check if user session exists in localStorage
-if (user && user.uid) {
-  const loginBtn = document.getElementById('loginBtn');
-  
-  if (loginBtn) {
-    // 1. Change button text
-    loginBtn.innerText = 'Logged In';
-    
-    // 2. Disable the button
-    loginBtn.disabled = true;
-    
-    // 3. Remove hover/click styling and update visual appearance
-    loginBtn.classList.remove('hover:bg-indigo-500', 'cursor-pointer');
-    loginBtn.classList.add('bg-slate-700', 'text-slate-400', 'cursor-not-allowed', 'opacity-80');
-    
-    // 4. Clear any inline onclick redirect handler
-    loginBtn.onclick = null;
-  }
-}
-  //login button
-  function handleLoginClick() {
-  const userTextDiv = document.getElementById('userTextDiv');
-
-  // Check if user session exists in localStorage
-  if (user && user.uid) {
-    // User is already logged in
-    if (userTextDiv) {
-      userTextDiv.innerText = "You are already logged in!";
-      userTextDiv.style.color = "#34d399"; // Emerald green text
-    } else {
-      alert("You are already logged in!");
-    }
-  } else {
-    // User is NOT logged in -> proceed to login page
-    window.location.href = '/front.html';
-  }
-}
-
-  // Check sync status from backend
-  async function checkBackendSyncStatus(uid) {
-    try {
-      const res = await fetch(`/api/is-synced/${uid}`);
-      if (res.ok) {
-        const data = await res.json();
-        return Boolean(data.is_synced); // Expects { is_synced: true/false }
-      }
-    } catch (err) {
-      console.warn("Error checking sync status from backend:", err);
-    }
-    return false;
-  }
-
-  // Redirect to profile setup if not synced or unauthenticated
-  function handleSyncRedirect() {
-    const userTextDiv = document.getElementById('userTextDiv');
-    const loginBtn = document.getElementById('loginBtn');
-
-    // If user does not exist, show login alert
-    if (!user || !user.uid) {
-      if (userTextDiv) {
-        userTextDiv.innerText = "You are not logged in. Please log in first.";
-        userTextDiv.style.color = "#f87171"; // Red text
-      }
-
-      if (loginBtn) {
-        loginBtn.style.backgroundColor = "#059669"; // Emerald green
-        loginBtn.style.color = "#ffffff";           // White text
-      }
-
-      
-      return;
-    }
-
-    window.location.href = './profile_setup.html';
-  }
-
-  // Update visual state of the navbar Sync Button
-  function updateSyncButton(isSynced) {
-    const syncBtn = document.getElementById('syncBtnNav');
-    if (!syncBtn) return;
-
-    if (isSynced) {
-      syncBtn.innerText = "Synced ✓";
-      syncBtn.className = "text-xs bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-lg cursor-default";
-      syncBtn.onclick = handleSyncRedirect;
-      syncBtn.disabled = false;
-    } else {
-      syncBtn.innerText = "Not Synced";
-      syncBtn.className = "text-xs bg-rose-600 hover:bg-rose-500 text-white font-semibold px-3 py-1.5 rounded-lg transition cursor-pointer";
-      syncBtn.onclick = handleSyncRedirect;
-      syncBtn.disabled = false;
-    }
-  }
-
-  // Initialize Dashboard on Page Load
-  async function initDashboard() {
-    if (!user || !user.uid) {
-      updateSyncButton(false);
-      return;
-    }
-
-    // 1. Render local cache immediately
-    renderUserInfo();
-
-    // 2. Fetch fresh user details & sync status in parallel
-    try {
-      const [freshUserRes, isSynced] = await Promise.all([
-        fetch(`/api/user/${user.uid}`).then(r => r.ok ? r.json() : null),
-        checkBackendSyncStatus(user.uid)
-      ]);
-
-      if (freshUserRes) {
-        user = { ...user, ...freshUserRes };
-        localStorage.setItem('user', JSON.stringify(user));
-        renderUserInfo();
-      }
-
-      // Update button state once with fresh backend verdict
-      updateSyncButton(isSynced);
-
-    } catch (err) {
-      console.warn("Could not fetch latest details, using cached state:", err);
-      // Fallback: check sync status once using local ID
-      const fallbackSync = await checkBackendSyncStatus(user.uid);
-      updateSyncButton(fallbackSync);
-    }
-  }
-
-  // Update DOM elements with user info
-  function renderUserInfo() {
-    if (!user) return;
-    
-    const navUser = document.getElementById('navUsername');
-    const statUid = document.getElementById('statUid');
-    const statCount = document.getElementById('statCount');
-    const badge = document.getElementById('statVectorStatus');
-
-    if (navUser) navUser.textContent = `Welcome, ${user.username || 'Developer'}`;
-    if (statUid) statUid.textContent = `#${user.uid}`;
-    if (statCount) statCount.textContent = user.question_count || 0;
-
-    if (badge) {
-      if (user.has_vector) {
-        badge.textContent = "Active";
-        badge.className = "text-xs font-semibold text-emerald-400 bg-emerald-950/50 border border-emerald-800 px-2 py-0.5 rounded";
-      } else {
-        badge.textContent = "Pending";
-        badge.className = "text-xs font-semibold text-amber-400 bg-amber-950/50 border border-amber-800 px-2 py-0.5 rounded";
-      }
-    }
-  }
-
-  // Fetch Recommendation from API
-  async function fetchRecommendation() {
-    const userTextDiv = document.getElementById('userTextDiv');
-    const loginBtn = document.getElementById('loginBtn');
-
-    if (!user || !user.uid) {
-      if (userTextDiv) {
-        userTextDiv.innerText = "You are not logged in. Please log in first.";
-        userTextDiv.style.color = "#f87171";
-      }
-
-      if (loginBtn) {
-        loginBtn.style.backgroundColor = "#059669";
-        loginBtn.style.color = "#ffffff";
-      }
-
-      updateSyncButton(false);
-      return;
-    }
-
-    const difficulty = document.getElementById('diffFilter').value;
-    const boost_topics = getSelectedValues(document.getElementById('boostTopics'));
-    const suppress_topics = getSelectedValues(document.getElementById('suppressTopics'));
-    const recTitle = document.getElementById('recTitle');
-    const recDiff = document.getElementById('recDifficulty');
-    const recScore = document.getElementById('recScore');
-    const scoreContainer = document.getElementById('scoreContainer');
-    const recActions = document.getElementById('recActions');
-
-    recTitle.textContent = "Calculating similarity vectors...";
-    recDiff.textContent = "";
-
-    try {
-      const res = await fetch('/api/get-next', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid: user.uid, difficulty, boost_topics, suppress_topics })
-      });
-
-      const data = await res.json();
-
-      if (res.ok && data.recommended_problem) {
-        const prob = data.recommended_problem;
-        currentRecId = prob.question_number;
-
-        recTitle.textContent = `#${prob.question_number} - ${prob.title}`;
-        recDiff.textContent = `Difficulty: ${prob.difficulty}`;
-        recScore.textContent = (data.similarity_match * 100).toFixed(2) + "%";
-
-        scoreContainer.classList.remove('hidden');
-        recActions.classList.remove('hidden');
-      } else {
-        recTitle.textContent = data.message || data.error || "No recommendation found.";
-        scoreContainer.classList.add('hidden');
-        recActions.classList.add('hidden');
-      }
-    } catch (err) {
-      recTitle.textContent = "Error connecting to recommendation service.";
-    }
-  }
-
-  // Mark current recommendation as solved
-  async function markCurrentAsSolved() {
-    if (!currentRecId) return;
-    await submitSolved(currentRecId);
-    fetchRecommendation();
-  }
-
-  // Mark current recommendation as "found difficult" (NOT solved).
-  // Question stays unsolved but gets a priority boost in future
-  // recommendations so the user comes back to it.
-  async function markCurrentAsDifficult() {
-    if (!currentRecId || !user || !user.uid) return;
-    try {
-      await fetch('/api/mark-difficult', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid: user.uid, question_number: currentRecId })
-      });
-    } catch (err) {
-      console.error("Failed to mark difficult:", err);
-    }
-    fetchRecommendation();
-  }
-
-  // Mark Quick Solved Form listener
-  document.getElementById('markSolvedForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const qNum = parseInt(document.getElementById('quickQNum').value);
-    await submitSolved(qNum);
-    document.getElementById('quickQNum').value = '';
-  });
-
-  // Submit solved problem to backend
-  async function submitSolved(question_number) {
-    if (!user || !user.uid) return;
-    try {
-      const res = await fetch('/api/add-solved', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid: user.uid, question_number })
-      });
-      
-      if (res.ok) {
-        const data = await res.json();
-        user.question_count = data.question_count ?? ((user.question_count || 0) + 1);
-        user.has_vector = true;
-        localStorage.setItem('user', JSON.stringify(user));
-        
-        renderUserInfo();
-      }
-    } catch (err) {
-      console.error("Failed to mark solved:", err);
-    }
-  }
-
-  function logout() {
-    localStorage.clear();
-    window.location.href = '/front.html';
-  }
-
-  // Run initialization
-  populateTopicSelectors();
-  initDashboard();
-</script>
+  <script src="topics_frontend.js"></script>
+  <script src="dashboard.js"></script>
+</body>
+</html>

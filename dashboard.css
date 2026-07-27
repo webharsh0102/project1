@@ -1,0 +1,321 @@
+:root {
+    --bg-main: #0b1120;
+    --bg-panel: #161f34;
+    --bg-input: #101828;
+    --text-main: #f1f5f9;
+    --text-muted: #8b98b3;
+    --border: #2b3958;
+
+    --primary: #6366f1;
+    --primary-hover: #4f46e5;
+    --success: #10b981;
+    --success-hover: #059669;
+    --danger: #ef4444;
+    --danger-hover: #dc2626;
+    --warning: #f59e0b;
+    --warning-hover: #d97706;
+    --error: #f87171;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    background-color: var(--bg-main);
+    background-image: radial-gradient(circle at top, #17203a 0%, var(--bg-main) 55%);
+    color: var(--text-main);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+}
+
+/* ---------------- Navbar ---------------- */
+.navbar {
+    background-color: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 1.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.navbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.navbar-brand h1 {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--primary);
+    letter-spacing: -0.02em;
+}
+
+.navbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.nav-username {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #cbd5e1;
+    margin-right: 0.25rem;
+}
+
+/* ---------------- Pills / badges ---------------- */
+.pill {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+.pill-active { color: #a5b4fc; background-color: rgba(99, 102, 241, 0.12); border-color: rgba(99, 102, 241, 0.4); }
+.pill-pending { color: var(--warning); background-color: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.4); }
+.pill-ready { color: var(--success); background-color: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.4); }
+
+/* ---------------- Buttons ---------------- */
+.btn {
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.78rem;
+    padding: 0.55rem 0.95rem;
+    transition: background-color 0.2s, opacity 0.2s, transform 0.1s;
+    white-space: nowrap;
+}
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.btn-primary { background-color: var(--primary); color: white; }
+.btn-primary:hover:not(:disabled) { background-color: var(--primary-hover); }
+
+.btn-success { background-color: var(--success); color: white; }
+.btn-success:hover:not(:disabled) { background-color: var(--success-hover); }
+
+.btn-warning { background-color: var(--warning); color: white; }
+.btn-warning:hover:not(:disabled) { background-color: var(--warning-hover); }
+
+.btn-danger { background-color: var(--danger); color: white; }
+.btn-danger:hover:not(:disabled) { background-color: var(--danger-hover); }
+
+.btn-contest { background-color: #8b5cf6; color: white; }
+.btn-contest:hover { background-color: #7c3aed; }
+
+.btn-ghost { background-color: var(--bg-input); color: #cbd5e1; border: 1px solid var(--border); }
+.btn-ghost:hover { background-color: #1e293b; }
+
+/* ---------------- Layout ---------------- */
+.dashboard-grid {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1.75rem;
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 1.5rem;
+}
+
+@media (max-width: 850px) {
+    .dashboard-grid { grid-template-columns: 1fr; }
+}
+
+.panel {
+    background-color: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.5rem;
+}
+
+.panel h2 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: 1.1rem;
+    color: #e2e8f0;
+}
+
+/* ---------------- Stat block ---------------- */
+.stat-block {
+    background-color: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.82rem;
+}
+
+.stat-label { color: var(--text-muted); }
+.stat-value { font-weight: 700; color: #e2e8f0; }
+.accent-text { color: var(--primary); font-family: "Courier New", monospace; }
+
+.section-block h3 {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+    margin-bottom: 0.65rem;
+}
+
+.inline-form {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.inline-form input {
+    flex: 1;
+    background-color: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-main);
+    padding: 0.55rem 0.75rem;
+    font-size: 0.85rem;
+    outline: none;
+}
+.inline-form input:focus { border-color: var(--primary); }
+
+/* ---------------- Recommendation panel ---------------- */
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1.1rem;
+    margin-bottom: 1.1rem;
+}
+
+.panel-subtext {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 0.2rem;
+}
+
+.filter-row {
+    display: flex;
+    gap: 0.5rem;
+}
+
+select {
+    background-color: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: #cbd5e1;
+    font-size: 0.75rem;
+    padding: 0.5rem 0.65rem;
+    outline: none;
+}
+select:focus { border-color: var(--primary); }
+
+.topic-picker-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 0.4rem;
+}
+
+@media (max-width: 550px) {
+    .topic-picker-grid { grid-template-columns: 1fr; }
+}
+
+.field label {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.35rem;
+}
+
+.field select {
+    width: 100%;
+}
+
+.hint-text {
+    font-size: 0.65rem;
+    color: #64748b;
+    margin-bottom: 1.25rem;
+}
+
+.user-text-msg {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: center;
+    min-height: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+/* ---------------- Recommendation card ---------------- */
+.rec-card {
+    background-color: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.rec-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+}
+
+.rec-card-top h3 {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #e2e8f0;
+    margin-top: 0.4rem;
+}
+
+.rec-difficulty {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-top: 0.3rem;
+}
+
+.score-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: rgba(99, 102, 241, 0.12);
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    border-radius: 999px;
+    padding: 0.4rem 1rem;
+    font-size: 0.72rem;
+    color: #a5b4fc;
+}
+
+.rec-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.rec-actions .btn { padding: 0.7rem 1.3rem; font-size: 0.82rem; }
+
+.hidden { display: none !important; }
+.mono { font-family: "Courier New", monospace; }
