@@ -109,9 +109,9 @@ const DECAY_LAMBDA = Math.log(2) / HALF_LIFE_DAYS;
 // Recently solved problems influence the profile more than old ones,
 // so the recommendation engine tracks where the user is skill-wise NOW.
 async function refreshUserProfileVector(connection, uid) {
-    // Pull each solved question's vector AND when it was solved
+    // 1. Fetch question_vector and difficulty (no time decay needed)
     const [historyRows] = await connection.execute(`
-        SELECT q.question_vector, h.solved_at
+        SELECT q.question_vector, q.difficulty
         FROM user_solved_history h
         JOIN questions q ON h.question_number = q.question_number
         WHERE h.uid = ?
@@ -119,7 +119,13 @@ async function refreshUserProfileVector(connection, uid) {
 
     if (historyRows.length === 0) return;
 
-    const now = Date.now();
+    // 2. Define static difficulty multiplier weights
+    const DIFFICULTY_WEIGHTS = {
+        'Easy': 1.0,
+        'Medium': 1.5,
+        'Hard': 2.2
+    };
+
     const vectorLength = (typeof historyRows[0].question_vector === 'string'
         ? JSON.parse(historyRows[0].question_vector)
         : historyRows[0].question_vector).length;
@@ -132,13 +138,8 @@ async function refreshUserProfileVector(connection, uid) {
             ? JSON.parse(row.question_vector)
             : row.question_vector;
 
-        // Age of this solve in days
-        const solvedAt = new Date(row.solved_at).getTime();
-        const ageDays = Math.max(0, (now - solvedAt) / (1000 * 60 * 60 * 24));
-
-        // Exponential decay weight: 1.0 for a solve done today,
-        // 0.5 after HALF_LIFE_DAYS, 0.25 after 2x HALF_LIFE_DAYS, etc.
-        const weight = Math.exp(-DECAY_LAMBDA * ageDays);
+        // Determine weight based strictly on problem difficulty
+        const weight = DIFFICULTY_WEIGHTS[row.difficulty] || 1.0;
 
         for (let i = 0; i < vectorLength; i++) {
             weightedSum[i] += vector[i] * weight;
@@ -146,14 +147,15 @@ async function refreshUserProfileVector(connection, uid) {
         totalWeight += weight;
     }
 
-    // Guard against divide-by-zero (shouldn't happen, but be safe)
-    const decayedVector = totalWeight > 0
+    // Normalize weighted vector sum
+    const profileVector = totalWeight > 0
         ? weightedSum.map(v => v / totalWeight)
         : weightedSum;
 
+    // 3. Save updated user vector and question count to DB
     await connection.execute(
         'UPDATE users SET question_count = ?, user_vector = ? WHERE uid = ?',
-        [historyRows.length, JSON.stringify(decayedVector), uid]
+        [historyRows.length, JSON.stringify(profileVector), uid]
     );
 }
 
