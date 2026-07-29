@@ -471,14 +471,9 @@ app.post('/api/get-next', async (req, res) => {
                 SELECT question_number FROM user_solved_history WHERE uid = ?
             )
         `;
-        let queryParams = [uid];
+        
 
-        if (difficulty) {
-            query += " AND difficulty = ?";
-            queryParams.push(difficulty);
-        }
-
-        const [candidateRows] = await pool.execute(query, queryParams);
+        const [candidateRows] = await pool.execute(query, [uid]);
         if (candidateRows.length === 0) {
             return res.status(404).json({ message: "No uncompleted vector matches exist for these filters." });
         }
@@ -502,6 +497,7 @@ app.post('/api/get-next', async (req, res) => {
         const pythonMatchResponse = await axios.post('http://127.0.0.1:8000/engine/calculate-similarity', {
             user_vector: userVector,
             candidates: candidatesPayload,
+            difficulty,
             boost_topics,
             suppress_topics,
             difficult_questions

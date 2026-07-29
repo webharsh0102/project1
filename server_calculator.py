@@ -1,5 +1,6 @@
 from typing import List, Optional
 import time
+import random
 from fastapi import FastAPI, HTTPException
 import numpy as np
 from pydantic import BaseModel
@@ -11,14 +12,11 @@ from topics_config import TOPIC_NAME_TO_INDEX
 
 app = FastAPI(title="LeetCode Recommendation Engine")
 
-# How much to scale a candidate's value at a boosted / suppressed topic
-# index before computing similarity. >1 pulls matching questions closer,
-# <1 pushes them further away. Tune these if boost/suppress feels too weak/strong.
+# Scaling multipliers for topic vector adjustments
 BOOST_MULTIPLIER = 1.35
 SUPPRESS_MULTIPLIER = 0.55
 
-# Extra score boost per "found difficult" click, capped so one question
-# marked difficult 20 times doesn't completely dominate every result.
+# Extra priority boost per "found difficult" mark
 DIFFICULT_BOOST_PER_MARK = 0.08
 DIFFICULT_BOOST_MAX = 0.40
 
@@ -27,9 +25,7 @@ DIFFICULT_BOOST_MAX = 0.40
 # Pydantic Schemas
 # =====================================================================
 class SyncRequest(BaseModel):
-    cookie: (
-        str  # Full cookie string: "LEETCODE_SESSION=...; csrftoken=..."
-    )
+    cookie: str  # Full cookie string: "LEETCODE_SESSION=...; csrftoken=..."
     csrf_token: Optional[str] = None
 
 
@@ -46,9 +42,10 @@ class DifficultQuestion(BaseModel):
 class SimilarityRequest(BaseModel):
     user_vector: List[float]
     candidates: List[Candidate]
-    boost_topics: List[str] = []      # topic names to weight UP this request
-    suppress_topics: List[str] = []   # topic names to weight DOWN this request
-    difficult_questions: List[DifficultQuestion] = []  # questions user found difficult before
+    difficulty: Optional[str] = None  # Difficulty filter passed from server.js
+    boost_topics: List[str] = []      # Topics to weight UP
+    suppress_topics: List[str] = []   # Topics to weight DOWN
+    difficult_questions: List[DifficultQuestion] = []  # Previously struggled questions
 
 
 # =====================================================================
@@ -77,7 +74,6 @@ def fetch_solved_ids(data: SyncRequest):
     raw_cookie = data.cookie.strip()
     csrf_token = data.csrf_token or ""
 
-    # Extract csrftoken automatically if not passed separately
     if not csrf_token and "csrftoken=" in raw_cookie:
         for part in raw_cookie.split(";"):
             if "csrftoken=" in part:
@@ -149,7 +145,7 @@ def fetch_solved_ids(data: SyncRequest):
             if len(all_solved_ids) >= total_num:
                 break
 
-            time.sleep(0.3)  # Avoid triggering rate limiters
+            time.sleep(0.3)
 
         return {
             "solved_ids": list(set(all_solved_ids)),
@@ -177,9 +173,7 @@ def calculate_similarity(data: SimilarityRequest):
             status_code=400, detail="Missing vector data parameters"
         )
 
-    # Build the list of (index, multiplier) adjustments once, from the
-    # topic names the user picked this request. Unknown topic names are
-    # silently ignored rather than erroring the whole request.
+    # 1. Build topic weight adjustment indices
     adjustments = []
     for name in data.boost_topics:
         idx = TOPIC_NAME_TO_INDEX.get(name)
@@ -190,43 +184,65 @@ def calculate_similarity(data: SimilarityRequest):
         if idx is not None:
             adjustments.append((idx, SUPPRESS_MULTIPLIER))
 
-    # Map question id -> extra score boost, from how many times the user
-    # has previously hit "Found Difficult" on that question.
-    difficult_boost_by_id = {}
-    for dq in data.difficult_questions:
-        boost = min(dq.times_marked * DIFFICULT_BOOST_PER_MARK, DIFFICULT_BOOST_MAX)
-        difficult_boost_by_id[dq.id] = boost
+    # 2. Map "Found Difficult" priority boosts
+    difficult_boost_by_id = {
+        dq.id: min(dq.times_marked * DIFFICULT_BOOST_PER_MARK, DIFFICULT_BOOST_MAX)
+        for dq in data.difficult_questions
+    }
 
     u_matrix = np.array(user_vector).reshape(1, -1)
-    best_id = None
-    max_score = -1.0
+    scored_candidates = []
+    diff = (data.difficulty or "").strip().capitalize()
 
+    # 3. Score every candidate
     for cand in candidates:
         if not cand.vector:
             continue
 
-        # Scale the candidate's own vector at the chosen topic indices so
-        # boosted-topic candidates score higher and suppressed-topic
-        # candidates score lower, without touching the user's own vector.
         cand_values = list(cand.vector)
         for idx, multiplier in adjustments:
             if idx < len(cand_values):
                 cand_values[idx] *= multiplier
 
         cand_matrix = np.array(cand_values).reshape(1, -1)
-        score = cosine_similarity(u_matrix, cand_matrix)[0][0]
+        raw_sim = float(cosine_similarity(u_matrix, cand_matrix)[0][0])
 
-        # Nudge previously-difficult questions back up so the user
-        # eventually revisits what tripped them up before.
-        score += difficult_boost_by_id.get(cand.id, 0.0)
+        # Apply search circle strategy based on difficulty
+        if diff == "Hard":
+            # Large Circle: Target lower/further similarity boundary
+            target_score = 1.0 - raw_sim
+        elif diff == "Medium":
+            # Medium Circle: Target moderate distance around 0.5
+            target_score = 1.0 - abs(raw_sim - 0.5)
+        else:
+            # Easy: Small Circle / highest similarity match
+            target_score = raw_sim
 
-        if score > max_score:
-            max_score = float(score)
-            best_id = cand.id
+        # Nudge up questions previously marked difficult
+        target_score += difficult_boost_by_id.get(cand.id, 0.0)
+
+        scored_candidates.append({
+            "id": cand.id,
+            "raw_similarity": raw_sim,
+            "target_score": target_score
+        })
+
+    if not scored_candidates:
+        return {"recommended_id": None, "score": 0.0}
+
+    # 4. Rank candidates descending by target_score
+    scored_candidates.sort(key=lambda x: x["target_score"], reverse=True)
+
+    # 5. Extract Top 5 matching candidates
+    top_5 = scored_candidates[:5]
+
+    # 6. Pick 1 randomly from the Top 5
+    chosen = random.choice(top_5)
 
     return {
-        "recommended_id": best_id,
-        "score": max_score if best_id is not None else 0.0,
+        "recommended_id": chosen["id"],
+        "score": chosen["raw_similarity"],
+        "target_score": chosen["target_score"]
     }
 
 
