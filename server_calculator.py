@@ -13,12 +13,57 @@ from topics_config import TOPIC_NAME_TO_INDEX
 app = FastAPI(title="LeetCode Recommendation Engine")
 
 # Scaling multipliers for topic vector adjustments
-BOOST_MULTIPLIER = 1.35
+BOOST_PRIMARY_MULTIPLIER = 1.45  # The requested topic gets the highest boost
+BOOST_PEER_MULTIPLIER = 1.25     # Co-occurring peer topics get a secondary boost
 SUPPRESS_MULTIPLIER = 0.55
 
 # Extra priority boost per "found difficult" mark
 DIFFICULT_BOOST_PER_MARK = 0.08
 DIFFICULT_BOOST_MAX = 0.40
+
+# Map of main topics to their top 4 co-occurring peer topics
+import json
+import os
+
+# 1. Get the absolute path to topic_co_occurrence.json (in the same directory)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+JSON_PATH = os.path.join(BASE_DIR, "topics.json")
+
+# 2. Load the JSON data dynamically on startup
+TOPIC_CO_OCCURRENCE = {}
+
+if os.path.exists(JSON_PATH):
+    try:
+        with open(JSON_PATH, "r", encoding="utf-8") as f:
+            TOPIC_CO_OCCURRENCE = json.load(f)
+        print(f"✅ Loaded {len(TOPIC_CO_OCCURRENCE)} topics from topics.json")
+    except json.JSONDecodeError as e:
+        print(f"❌ Error reading JSON format in {JSON_PATH}: {e}")
+else:
+    print(f"⚠️ Warning: {JSON_PATH} not found. TOPIC_CO_OCCURRENCE is empty!")
+
+
+def expand_topics_with_co_occurrence(boost_topics: List[str]) -> List[tuple]:
+    """
+    Expands each requested boost topic to include its top 4 co-occurring peer topics.
+    Returns a list of (topic_index, multiplier) tuples.
+    """
+    adjustments = []
+    
+    for main_topic in boost_topics:
+        # 1. Boost the main selected topic
+        idx = TOPIC_NAME_TO_INDEX.get(main_topic)
+        if idx is not None:
+            adjustments.append((idx, BOOST_PRIMARY_MULTIPLIER))
+        
+        # 2. Boost top 4 co-occurring peer topics
+        peers = TOPIC_CO_OCCURRENCE.get(main_topic, [])
+        for peer in peers:
+            peer_idx = TOPIC_NAME_TO_INDEX.get(peer)
+            if peer_idx is not None:
+                adjustments.append((peer_idx, BOOST_PEER_MULTIPLIER))
+                
+    return adjustments
 
 
 # =====================================================================
@@ -42,7 +87,7 @@ class DifficultQuestion(BaseModel):
 class SimilarityRequest(BaseModel):
     user_vector: List[float]
     candidates: List[Candidate]
-    difficulty: Optional[str] = None  # Difficulty filter passed from server.js
+    difficulty: Optional[str] = None  # Difficulty filter / search radius mode passed from server.js
     boost_topics: List[str] = []      # Topics to weight UP
     suppress_topics: List[str] = []   # Topics to weight DOWN
     difficult_questions: List[DifficultQuestion] = []  # Previously struggled questions
@@ -173,18 +218,16 @@ def calculate_similarity(data: SimilarityRequest):
             status_code=400, detail="Missing vector data parameters"
         )
 
-    # 1. Build topic weight adjustment indices
-    adjustments = []
-    for name in data.boost_topics:
-        idx = TOPIC_NAME_TO_INDEX.get(name)
-        if idx is not None:
-            adjustments.append((idx, BOOST_MULTIPLIER))
+    # 1. Expand requested boost topics into 5-way directional adjustments
+    adjustments = expand_topics_with_co_occurrence(data.boost_topics)
+
+    # 2. Add suppress topic adjustments
     for name in data.suppress_topics:
         idx = TOPIC_NAME_TO_INDEX.get(name)
         if idx is not None:
             adjustments.append((idx, SUPPRESS_MULTIPLIER))
 
-    # 2. Map "Found Difficult" priority boosts
+    # 3. Map "Found Difficult" priority boosts
     difficult_boost_by_id = {
         dq.id: min(dq.times_marked * DIFFICULT_BOOST_PER_MARK, DIFFICULT_BOOST_MAX)
         for dq in data.difficult_questions
@@ -194,7 +237,7 @@ def calculate_similarity(data: SimilarityRequest):
     scored_candidates = []
     diff = (data.difficulty or "").strip().capitalize()
 
-    # 3. Score every candidate
+    # 4. Score every candidate
     for cand in candidates:
         if not cand.vector:
             continue
@@ -209,7 +252,7 @@ def calculate_similarity(data: SimilarityRequest):
 
         # Apply search circle strategy based on difficulty
         if diff == "Hard":
-            # Large Circle: Target lower/further similarity boundary
+            # Large Circle: Target lower/further similarity boundary across vector space
             target_score = 1.0 - raw_sim
         elif diff == "Medium":
             # Medium Circle: Target moderate distance around 0.5
@@ -218,7 +261,7 @@ def calculate_similarity(data: SimilarityRequest):
             # Easy: Small Circle / highest similarity match
             target_score = raw_sim
 
-        # Nudge up questions previously marked difficult
+        # Priority boost for previously marked difficult questions
         target_score += difficult_boost_by_id.get(cand.id, 0.0)
 
         scored_candidates.append({
@@ -230,13 +273,13 @@ def calculate_similarity(data: SimilarityRequest):
     if not scored_candidates:
         return {"recommended_id": None, "score": 0.0}
 
-    # 4. Rank candidates descending by target_score
+    # 5. Rank candidates descending by target_score
     scored_candidates.sort(key=lambda x: x["target_score"], reverse=True)
 
-    # 5. Extract Top 5 matching candidates
+    # 6. Extract Top 5 matching candidates
     top_5 = scored_candidates[:5]
 
-    # 6. Pick 1 randomly from the Top 5
+    # 7. Pick 1 randomly from the Top 5
     chosen = random.choice(top_5)
 
     return {
