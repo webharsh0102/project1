@@ -7,6 +7,11 @@ let mode = 'login';
 
 // Switches between Log In and Sign Up UI states
 function switchTab(targetMode) {
+  const allFields = document.querySelectorAll('.hidden3');
+  allFields.forEach(field => {
+    field.classList.toggle('hidden2');
+  });
+
   mode = targetMode;
   const tabLogin = document.getElementById('tabLogin');
   const tabRegister = document.getElementById('tabRegister');

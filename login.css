@@ -133,6 +133,7 @@ body {
 }
 
 .hidden { display: none !important; }
+.hidden2 { display: none !important; }
 
 .btn {
     border: none;
