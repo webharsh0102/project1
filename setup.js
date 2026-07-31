@@ -6,10 +6,10 @@
 const user = JSON.parse(localStorage.getItem('user'));
 const addedQuestions = new Set();
 
-//if (!user || !user.uid) {
-// alert('User session not found. Please log in again.');
-//  window.location.href = '/front.html';
-//}
+if (!user || !user.uid) {
+  alert('User session not found. Please log in again.');
+  window.location.href = '/front.html';
+}
 
 function showAlert(msg, isSuccess = true) {
   const box = document.getElementById('alertBox');

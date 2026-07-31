@@ -14,6 +14,90 @@
 let user = JSON.parse(localStorage.getItem('user'));
 let currentRecId = null;
 
+if (!user || !user.uid) {
+ alert('User session not found. Please log in again.');
+  window.location.href = '/front.html';
+}
+
+//
+document.addEventListener("DOMContentLoaded", async () => {
+  // 1. Fetch data from backend on page load
+  const topicStats = await fetchTopicData();
+
+  // 2. Select all topic elements defined in HTML
+  const topicWrappers = document.querySelectorAll(".topic-wrapper");
+
+  topicWrappers.forEach((wrapper) => {
+    const topicName = wrapper.getAttribute("data-topic");
+    const stats = topicStats[topicName] || {
+      solved: 0,
+      total: 100,
+      easy: 0,
+      medium: 0,
+      hard: 0,
+      peers: []
+    };
+
+    const percent = Math.round((stats.solved / stats.total) * 100);
+
+    // Update Percentage Pill on the visible badge
+    const percentPill = wrapper.querySelector(".percent-pill");
+    if (percentPill) {
+      percentPill.textContent = `${percent}%`;
+    }
+
+    // Populate Tooltip HTML ahead of time
+    const tooltipCard = wrapper.querySelector(".tooltip-card");
+    if (tooltipCard) {
+      tooltipCard.innerHTML = `
+        <div class="tooltip-header">
+          <span class="tooltip-title">${topicName}</span>
+          <span class="tooltip-count">${stats.solved}/${stats.total}</span>
+        </div>
+
+        <div class="progress-track">
+          <div class="progress-fill" style="width: ${percent}%;"></div>
+        </div>
+
+        <div class="difficulty-grid">
+          <div class="diff-box diff-easy">
+            <div style="font-weight:bold;">${stats.easy}</div>
+            <div>Easy</div>
+          </div>
+          <div class="diff-box diff-medium">
+            <div style="font-weight:bold;">${stats.medium}</div>
+            <div>Medium</div>
+          </div>
+          <div class="diff-box diff-hard">
+            <div style="font-weight:bold;">${stats.hard}</div>
+            <div>Hard</div>
+          </div>
+        </div>
+
+        <div class="peers-section">
+          <span class="peers-label">Boosting Peers:</span>
+          <div class="peers-tags">
+            ${stats.peers.map((p) => `<span class="peer-tag">${p}</span>`).join("")}
+          </div>
+        </div>
+      `;
+    }
+  });
+});
+
+// Helper function to mock or fetch topic metrics on load
+async function fetchTopicData() {
+  // Replace this object with your actual fetch call to server.js
+  // e.g., return fetch('/api/user-topic-stats').then(res => res.json());
+
+  return {
+    "Dynamic Programming": { solved: 24, total: 60, easy: 10, medium: 10, hard: 4, peers: ["Recursion", "Memoization", "Greedy", "Array"] },
+    "Binary Tree": { solved: 32, total: 50, easy: 15, medium: 12, hard: 5, peers: ["Tree", "DFS", "BFS", "Recursion"] },
+    "Two Pointers": { solved: 18, total: 30, easy: 10, medium: 6, hard: 2, peers: ["Array", "String", "Sorting", "Sliding Window"] },
+    "Graph": { solved: 12, total: 40, easy: 2, medium: 7, hard: 3, peers: ["BFS", "DFS", "Union Find", "Shortest Path"] },
+    "Array": { solved: 85, total: 100, easy: 50, medium: 25, hard: 10, peers: ["Two Pointers", "Sliding Window", "Sorting", "Hash Table"] }
+  };
+}
 // ---------------------------------------------------------------------
 // Boost / Suppress topic selectors
 // ---------------------------------------------------------------------
