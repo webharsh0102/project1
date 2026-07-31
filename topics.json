@@ -1,414 +1,411 @@
 {
     "Array": [
-        "Array",
         "Hash Table",
         "Sorting",
-        "Dynamic Programming"
+        "Dynamic Programming",
+        "Greedy"
     ],
     "Backtracking": [
-        "Backtracking",
         "Array",
         "String",
-        "Bit Manipulation"
+        "Bit Manipulation",
+        "Dynamic Programming"
     ],
     "Biconnected Component": [
         "Depth-First Search",
-        "Biconnected Component",
         "Graph"
     ],
     "Binary Indexed Tree": [
-        "Binary Indexed Tree",
         "Array",
         "Segment Tree",
-        "Binary Search"
+        "Binary Search",
+        "Divide and Conquer"
     ],
     "Binary Search": [
-        "Binary Search",
         "Array",
         "Sorting",
-        "Hash Table"
+        "Hash Table",
+        "Greedy"
     ],
     "Binary Search Tree": [
         "Tree",
         "Binary Tree",
-        "Binary Search Tree",
-        "Depth-First Search"
+        "Depth-First Search",
+        "Divide and Conquer"
     ],
     "Binary Tree": [
         "Tree",
-        "Binary Tree",
         "Depth-First Search",
-        "Breadth-First Search"
+        "Breadth-First Search",
+        "Binary Search Tree"
     ],
     "Bit Manipulation": [
-        "Bit Manipulation",
         "Array",
         "Dynamic Programming",
-        "Bitmask"
+        "Bitmask",
+        "Hash Table"
     ],
     "Bitmask": [
-        "Bitmask",
         "Bit Manipulation",
         "Dynamic Programming",
-        "Array"
+        "Array",
+        "Backtracking"
     ],
     "Brainteaser": [
-        "Brainteaser",
         "Math",
         "Array",
-        "Bit Manipulation"
+        "Bit Manipulation",
+        "Game Theory"
     ],
     "Breadth-First Search": [
-        "Breadth-First Search",
         "Depth-First Search",
         "Array",
-        "Tree"
+        "Tree",
+        "Graph"
     ],
     "Bucket Sort": [
         "Sorting",
-        "Bucket Sort",
         "Array",
-        "Heap (Priority Queue)"
+        "Heap (Priority Queue)",
+        "Counting"
     ],
     "Combinatorics": [
         "Math",
-        "Combinatorics",
         "Dynamic Programming",
-        "Array"
-    ],
-    "Counting": [
-        "Counting",
-        "Hash Table",
         "Array",
         "String"
     ],
-    "Counting Sort": [
-        "Sorting",
-        "Counting Sort",
-        "Array",
-        "Greedy"
-    ],
-    "Data Stream": [
-        "Data Stream",
-        "Design",
-        "Heap (Priority Queue)",
-        "Array"
-    ],
-    "Depth-First Search": [
-        "Depth-First Search",
-        "Tree",
-        "Breadth-First Search",
-        "Binary Tree"
-    ],
-    "Design": [
-        "Design",
+    "Counting": [
         "Hash Table",
         "Array",
-        "Ordered Set"
+        "String",
+        "Sorting"
+    ],
+    "Counting Sort": [
+        "Sorting",
+        "Array",
+        "Greedy",
+        "Hash Table"
+    ],
+    "Data Stream": [
+        "Design",
+        "Heap (Priority Queue)",
+        "Array",
+        "Queue"
+    ],
+    "Depth-First Search": [
+        "Tree",
+        "Breadth-First Search",
+        "Binary Tree",
+        "Array"
+    ],
+    "Design": [
+        "Hash Table",
+        "Array",
+        "Ordered Set",
+        "String"
     ],
     "Divide and Conquer": [
-        "Divide and Conquer",
         "Array",
         "Segment Tree",
+        "Binary Indexed Tree",
         "Sorting"
     ],
     "Doubly-Linked List": [
         "Linked List",
-        "Doubly-Linked List",
         "Hash Table",
-        "Design"
+        "Design",
+        "Simulation"
     ],
     "Dynamic Programming": [
-        "Dynamic Programming",
         "Array",
         "String",
-        "Math"
+        "Math",
+        "Bit Manipulation"
     ],
     "Enumeration": [
-        "Enumeration",
         "Array",
         "Math",
-        "Hash Table"
+        "Hash Table",
+        "String"
     ],
     "Eulerian Circuit": [
-        "Eulerian Circuit",
         "Depth-First Search",
         "Graph"
     ],
     "Game Theory": [
         "Math",
-        "Game Theory",
         "Array",
-        "Dynamic Programming"
+        "Dynamic Programming",
+        "Greedy"
     ],
     "Geometry": [
         "Math",
-        "Geometry",
         "Array",
-        "Sorting"
+        "Sorting",
+        "Hash Table"
     ],
     "Graph": [
-        "Graph",
         "Breadth-First Search",
         "Depth-First Search",
-        "Array"
+        "Array",
+        "Union Find"
     ],
     "Greedy": [
-        "Greedy",
         "Array",
         "Sorting",
-        "String"
+        "String",
+        "Math"
     ],
     "Hash Function": [
-        "Hash Function",
         "Rolling Hash",
         "String",
-        "String Matching"
+        "String Matching",
+        "Array"
     ],
     "Hash Table": [
-        "Hash Table",
         "Array",
         "String",
-        "Counting"
+        "Counting",
+        "Sorting"
     ],
     "Heap (Priority Queue)": [
-        "Heap (Priority Queue)",
         "Array",
         "Sorting",
-        "Greedy"
+        "Greedy",
+        "Hash Table"
     ],
     "Interactive": [
-        "Interactive",
         "Binary Search",
         "Math",
-        "Array"
+        "Array",
+        "String"
     ],
     "Iterator": [
         "Design",
-        "Iterator",
         "Stack",
-        "Array"
+        "Array",
+        "Tree"
     ],
     "Line Sweep": [
-        "Line Sweep",
+        "Array",
+        "Segment Tree",
+        "Heap (Priority Queue)",
+        "Ordered Set"
+    ],
+    "Linked List": [
+        "Hash Table",
+        "Design",
+        "Two Pointers",
+        "Array"
+    ],
+    "Math": [
+        "Array",
+        "Dynamic Programming",
+        "String",
+        "Hash Table"
+    ],
+    "Matrix": [
+        "Array",
+        "Breadth-First Search",
+        "Dynamic Programming",
+        "Depth-First Search"
+    ],
+    "Memoization": [
+        "Dynamic Programming",
+        "Array",
+        "Math",
+        "Bit Manipulation"
+    ],
+    "Merge Sort": [
+        "Divide and Conquer",
         "Array",
         "Segment Tree",
         "Ordered Set"
     ],
-    "Linked List": [
-        "Linked List",
-        "Hash Table",
-        "Design",
-        "Two Pointers"
-    ],
-    "Math": [
-        "Math",
-        "Array",
-        "Dynamic Programming",
-        "String"
-    ],
-    "Matrix": [
-        "Matrix",
-        "Array",
-        "Breadth-First Search",
-        "Dynamic Programming"
-    ],
-    "Memoization": [
-        "Memoization",
-        "Dynamic Programming",
-        "Array",
-        "Math"
-    ],
-    "Merge Sort": [
-        "Merge Sort",
-        "Divide and Conquer",
-        "Array",
-        "Segment Tree"
-    ],
     "Minimum Spanning Tree": [
         "Union Find",
         "Graph",
-        "Minimum Spanning Tree",
+        "Sorting",
         "Strongly Connected Component"
     ],
     "Monotonic Queue": [
-        "Monotonic Queue",
         "Queue",
         "Array",
-        "Sliding Window"
+        "Sliding Window",
+        "Heap (Priority Queue)"
     ],
     "Monotonic Stack": [
         "Stack",
-        "Monotonic Stack",
         "Array",
-        "Greedy"
+        "Greedy",
+        "Dynamic Programming"
     ],
     "Number Theory": [
         "Math",
-        "Number Theory",
-        "Array",
-        "Hash Table"
-    ],
-    "Ordered Set": [
-        "Ordered Set",
-        "Array",
-        "Binary Search",
-        "Segment Tree"
-    ],
-    "Prefix Sum": [
-        "Prefix Sum",
         "Array",
         "Hash Table",
-        "Binary Search"
+        "String"
+    ],
+    "Ordered Set": [
+        "Array",
+        "Binary Search",
+        "Segment Tree",
+        "Hash Table"
+    ],
+    "Prefix Sum": [
+        "Array",
+        "Hash Table",
+        "Binary Search",
+        "Dynamic Programming"
     ],
     "Probability and Statistics": [
         "Math",
-        "Probability and Statistics",
         "Dynamic Programming",
-        "Array"
+        "Array",
+        "Sliding Window"
     ],
     "Queue": [
-        "Queue",
         "Array",
         "Monotonic Queue",
-        "Sliding Window"
+        "Sliding Window",
+        "Heap (Priority Queue)"
     ],
     "Quickselect": [
         "Sorting",
         "Divide and Conquer",
         "Array",
-        "Quickselect"
+        "Heap (Priority Queue)"
     ],
     "Radix Sort": [
         "Sorting",
-        "Radix Sort",
         "Array",
-        "Heap (Priority Queue)"
+        "Heap (Priority Queue)",
+        "Bucket Sort"
     ],
     "Randomized": [
-        "Randomized",
         "Math",
         "Array",
-        "Hash Table"
+        "Hash Table",
+        "Reservoir Sampling"
     ],
     "Recursion": [
-        "Recursion",
         "Math",
         "String",
-        "Linked List"
+        "Linked List",
+        "Stack"
     ],
     "Rejection Sampling": [
-        "Rejection Sampling",
         "Randomized",
         "Math",
-        "Probability and Statistics"
+        "Probability and Statistics",
+        "Geometry"
     ],
     "Reservoir Sampling": [
-        "Reservoir Sampling",
         "Randomized",
         "Math",
-        "Hash Table"
+        "Hash Table",
+        "Ordered Set"
     ],
     "Rolling Hash": [
-        "Rolling Hash",
         "Hash Function",
         "String",
-        "String Matching"
+        "String Matching",
+        "Array"
     ],
     "Segment Tree": [
-        "Segment Tree",
         "Array",
         "Binary Search",
-        "Binary Indexed Tree"
+        "Binary Indexed Tree",
+        "Ordered Set"
     ],
     "Shortest Path": [
-        "Shortest Path",
         "Graph",
         "Heap (Priority Queue)",
-        "Array"
+        "Array",
+        "Breadth-First Search"
     ],
     "Simulation": [
-        "Simulation",
         "Array",
         "String",
-        "Math"
+        "Math",
+        "Matrix"
     ],
     "Sliding Window": [
-        "Sliding Window",
         "Array",
         "Hash Table",
-        "String"
+        "String",
+        "Prefix Sum"
     ],
     "Sort": [
-        "Sort",
-        "Hash Table",
         "Greedy",
-        "Array"
-    ],
-    "Sorting": [
-        "Sorting",
         "Array",
-        "Greedy",
         "Hash Table"
     ],
+    "Sorting": [
+        "Array",
+        "Greedy",
+        "Hash Table",
+        "Binary Search"
+    ],
     "Stack": [
-        "Stack",
         "Array",
         "String",
-        "Monotonic Stack"
+        "Monotonic Stack",
+        "Greedy"
     ],
     "String": [
-        "String",
         "Hash Table",
         "Array",
-        "Dynamic Programming"
+        "Dynamic Programming",
+        "Greedy"
     ],
     "String Matching": [
-        "String Matching",
         "String",
         "Hash Function",
-        "Rolling Hash"
+        "Rolling Hash",
+        "Array"
     ],
     "Strongly Connected Component": [
-        "Strongly Connected Component",
-        "Graph",
         "Array",
+        "Graph",
+        "Sorting",
         "Tree"
     ],
     "Suffix Array": [
-        "Suffix Array",
         "String",
-        "Rolling Hash",
-        "Hash Function"
+        "Hash Function",
+        "Binary Search",
+        "Rolling Hash"
     ],
     "Topological Sort": [
-        "Topological Sort",
         "Graph",
         "Array",
-        "Depth-First Search"
+        "Depth-First Search",
+        "Dynamic Programming"
     ],
     "Tree": [
-        "Tree",
         "Depth-First Search",
         "Binary Tree",
-        "Breadth-First Search"
+        "Breadth-First Search",
+        "Array"
     ],
     "Trie": [
-        "Trie",
         "Array",
         "String",
-        "Hash Table"
+        "Hash Table",
+        "Design"
     ],
     "Two Pointers": [
-        "Two Pointers",
         "Array",
         "String",
-        "Sorting"
+        "Sorting",
+        "Binary Search"
     ],
     "Union Find": [
-        "Union Find",
         "Array",
         "Depth-First Search",
-        "Breadth-First Search"
+        "Breadth-First Search",
+        "Graph"
     ]
 }

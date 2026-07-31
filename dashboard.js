@@ -20,93 +20,98 @@ if (!user || !user.uid) {
 }
 
 //
+// TOPIC_NAMES list matching the vector indices in server.js
+const TOPIC_NAMES2 = [
+  "Array", "Backtracking", "Biconnected Component", "Binary Indexed Tree",
+  "Binary Search", "Binary Search Tree", "Binary Tree", "Bit Manipulation",
+  "Bitmask", "Brainteaser", "Breadth-First Search", "Bucket Sort",
+  "Combinatorics", "Counting", "Counting Sort", "Data Stream",
+  "Depth-First Search", "Design", "Divide and Conquer", "Doubly-Linked List",
+  "Dynamic Programming", "Enumeration", "Eulerian Circuit", "Game Theory",
+  "Geometry", "Graph", "Greedy", "Hash Function", "Hash Table",
+  "Heap (Priority Queue)", "Interactive", "Iterator", "Line Sweep",
+  "Linked List", "Math", "Matrix", "Memoization", "Merge Sort",
+  "Minimum Spanning Tree", "Monotonic Queue", "Monotonic Stack",
+  "Number Theory", "Ordered Set", "Prefix Sum", "Probability and Statistics",
+  "Queue", "Quickselect", "Radix Sort", "Randomized", "Recursion",
+  "Rejection Sampling", "Reservoir Sampling", "Rolling Hash", "Segment Tree",
+  "Shortest Path", "Simulation", "Sliding Window", "Sort", "Sorting",
+  "Stack", "String", "String Matching", "Strongly Connected Component",
+  "Suffix Array", "Topological Sort", "Tree", "Trie", "Two Pointers",
+  "Union Find"
+];
+
+async function fetchTopicData(uid) {
+  try {
+    const res = await fetch(`/api/eachtopic/${uid}`);
+    if (!res.ok) throw new Error("Network response failed");
+    return await res.json();
+  } catch (err) {
+    console.error("Error fetching topic data:", err);
+    return null;
+  }
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
-  // 1. Fetch data from backend on page load
-  const topicStats = await fetchTopicData();
+  const container = document.getElementById("topics-grid");
+  
+  if (!container) {
+    console.error("❌ Could not find element with id='topics-grid' in HTML!");
+    return;
+  }
 
-  // 2. Select all topic elements defined in HTML
-  const topicWrappers = document.querySelectorAll(".topic-wrapper");
+  // Get current user ID (adjust logic to pull from global user variable/session)
+  const uid = typeof currentUserId !== "undefined" ? currentUserId : "123";
 
-  topicWrappers.forEach((wrapper) => {
-    const topicName = wrapper.getAttribute("data-topic");
-    const stats = topicStats[topicName] || {
-      solved: 0,
-      total: 100,
-      easy: 0,
-      medium: 0,
-      hard: 0,
-      peers: []
-    };
+  const response = await fetchTopicData(uid);
+  if (!response || !response.success) {
+    console.error("Failed to load topic stats");
+    return;
+  }
 
-    const percent = Math.round((stats.solved / stats.total) * 100);
+  const solvedMap = response.data || {};
+  const totalMap = response.metadata || {};
 
-    // Update Percentage Pill on the visible badge
-    const percentPill = wrapper.querySelector(".percent-pill");
-    if (percentPill) {
-      percentPill.textContent = `${percent}%`;
-    }
+  container.innerHTML = ""; // Clear existing grid items
 
-    // Populate Tooltip HTML ahead of time
-    const tooltipCard = wrapper.querySelector(".tooltip-card");
-    if (tooltipCard) {
-      tooltipCard.innerHTML = `
+  // Render all topics from TOPIC_NAMES
+  TOPIC_NAMES2.forEach((topicName) => {
+    const solved = solvedMap[topicName] || 0;
+    const total = totalMap[topicName] || 0;
+    const percent = total > 0 ? Math.round((solved / total) * 100) : 0;
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "topic-wrapper";
+    wrapper.setAttribute("data-topic", topicName);
+
+    wrapper.innerHTML = `
+      <button class="topic-badge">
+        <span class="topic-title">${topicName}</span>
+        <span class="percent-pill">${percent}%</span>
+      </button>
+      <div class="tooltip-card">
         <div class="tooltip-header">
           <span class="tooltip-title">${topicName}</span>
-          <span class="tooltip-count">${stats.solved}/${stats.total}</span>
+          <span class="tooltip-count">${solved}/${total} Solved</span>
         </div>
-
         <div class="progress-track">
           <div class="progress-fill" style="width: ${percent}%;"></div>
         </div>
+      </div>
+    `;
 
-        <div class="difficulty-grid">
-          <div class="diff-box diff-easy">
-            <div style="font-weight:bold;">${stats.easy}</div>
-            <div>Easy</div>
-          </div>
-          <div class="diff-box diff-medium">
-            <div style="font-weight:bold;">${stats.medium}</div>
-            <div>Medium</div>
-          </div>
-          <div class="diff-box diff-hard">
-            <div style="font-weight:bold;">${stats.hard}</div>
-            <div>Hard</div>
-          </div>
-        </div>
-
-        <div class="peers-section">
-          <span class="peers-label">Boosting Peers:</span>
-          <div class="peers-tags">
-            ${stats.peers.map((p) => `<span class="peer-tag">${p}</span>`).join("")}
-          </div>
-        </div>
-      `;
-    }
+    container.appendChild(wrapper);
   });
 });
-
-// Helper function to mock or fetch topic metrics on load
-async function fetchTopicData() {
-  // Replace this object with your actual fetch call to server.js
-  // e.g., return fetch('/api/user-topic-stats').then(res => res.json());
-
-  return {
-    "Dynamic Programming": { solved: 24, total: 60, easy: 10, medium: 10, hard: 4, peers: ["Recursion", "Memoization", "Greedy", "Array"] },
-    "Binary Tree": { solved: 32, total: 50, easy: 15, medium: 12, hard: 5, peers: ["Tree", "DFS", "BFS", "Recursion"] },
-    "Two Pointers": { solved: 18, total: 30, easy: 10, medium: 6, hard: 2, peers: ["Array", "String", "Sorting", "Sliding Window"] },
-    "Graph": { solved: 12, total: 40, easy: 2, medium: 7, hard: 3, peers: ["BFS", "DFS", "Union Find", "Shortest Path"] },
-    "Array": { solved: 85, total: 100, easy: 50, medium: 25, hard: 10, peers: ["Two Pointers", "Sliding Window", "Sorting", "Hash Table"] }
-  };
-}
 // ---------------------------------------------------------------------
 // Boost / Suppress topic selectors
 // ---------------------------------------------------------------------
 function populateTopicSelectors() {
   const boostSelect = document.getElementById('boostTopics');
   const suppressSelect = document.getElementById('suppressTopics');
-  if (!boostSelect || !suppressSelect || typeof TOPIC_NAMES === 'undefined') return;
+  if (!boostSelect || !suppressSelect || typeof TOPIC_NAMES2 === 'undefined') return;
 
-  TOPIC_NAMES.forEach(topic => {
+  TOPIC_NAMES2.forEach(topic => {
     const boostOption = document.createElement('option');
     boostOption.value = topic;
     boostOption.textContent = topic;
