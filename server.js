@@ -4,7 +4,9 @@ const axios = require('axios');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const path = require('path');
+const nodemailer = require('nodemailer');
 const { TOPIC_NAMES2, NON_TOPIC_FEATURE_COUNT } = require('./topics_config');
+
 
 const app = express();
 const router = express.Router();
@@ -658,23 +660,118 @@ app.post('/api/contest/generate', async (req, res) => {
 // =====================================================================
 // Auth Routes
 // =====================================================================
-router.post('/register', async (req, res) => {
-    try {
-        const { username, password } = req.body;
+// =====================================================================
+// EMAIL OTP VERIFICATION (Sign Up only)
+// =====================================================================
 
-        if (!username || !password) {
-            return res.status(400).json({ message: 'Username and password required' });
+
+const OTP_MAILER = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.OTP_EMAIL_USER || '1harshfeb@gmail.com',
+        pass: process.env.OTP_EMAIL_PASS || 'qxvd zhaa fzor zhfy'
+    }
+});
+
+const OTP_VALIDITY_MINUTES = 5;
+
+function generateOtp() {
+    return String(Math.floor(100000 + Math.random() * 900000)); // 6 digits
+}
+
+// POST /api/request-otp — generates + emails a code.
+// email is PRIMARY KEY, so a resend just overwrites otp_code + created_at.
+app.post('/api/request-otp', async (req, res) => {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: 'Email is required' });
+
+    try {
+        const [existingUser] = await pool.execute('SELECT uid FROM users WHERE email = ?', [email]);
+        if (existingUser.length > 0) {
+            return res.status(400).json({ message: 'An account with this email already exists.' });
         }
 
-        const saltRounds = 10;
-        const hashedPassword = await bcrypt.hash(password, saltRounds);
+        const otp_code = generateOtp();
 
-        const query = `
-            INSERT INTO users (username, password_hash)
-            VALUES (?, ?)
-        `;
+        await pool.execute(
+            `INSERT INTO otp_verifications (email, otp_code, verified, created_at)
+             VALUES (?, ?, 0, CURRENT_TIMESTAMP)
+             ON DUPLICATE KEY UPDATE otp_code = VALUES(otp_code), verified = 0, created_at = CURRENT_TIMESTAMP`,
+            [email, otp_code]
+        );
 
-        const [result] = await pool.execute(query, [username, hashedPassword]);
+        await OTP_MAILER.sendMail({
+            from: process.env.OTP_EMAIL_USER || '1harshfeb@gmail.com',
+            to: email,
+            subject: 'Your RecEngine verification code',
+            text: `Your verification code is ${otp_code}. It expires in ${OTP_VALIDITY_MINUTES} minutes.`
+        });
+
+        return res.json({ success: true, message: 'OTP sent to your email.' });
+    } catch (err) {
+        console.error('Error sending OTP:', err);
+        return res.status(500).json({ message: 'Failed to send OTP email.' });
+    }
+});
+
+// POST /api/verify-otp — checks the code against the timestamp window,
+// marks verified=1 if valid. Does NOT delete the row here — deletion
+// happens only after successful /register (so verified=1 persists just
+// long enough for the register call right after it).
+app.post('/api/verify-otp', async (req, res) => {
+    const { email, otp } = req.body;
+    if (!email || !otp) return res.status(400).json({ message: 'Email and OTP are required' });
+
+    try {
+        const [rows] = await pool.execute(
+            `SELECT * FROM otp_verifications
+             WHERE email = ? AND otp_code = ?
+               AND created_at > NOW() - INTERVAL ${OTP_VALIDITY_MINUTES} MINUTE`,
+            [email, otp]
+        );
+
+        if (rows.length === 0) {
+            return res.status(400).json({ message: 'Invalid or expired OTP.' });
+        }
+
+        await pool.execute('UPDATE otp_verifications SET verified = 1 WHERE email = ?', [email]);
+        return res.json({ success: true, message: 'Email verified.' });
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
+    }
+});
+
+// =====================================================================
+// Auth Routes
+// =====================================================================
+router.post('/register', async (req, res) => {
+    try {
+        const { username, password, email } = req.body;
+
+        if (!username || !password || !email) {
+            return res.status(400).json({ message: 'Username, password, and email are required' });
+        }
+
+        // Must have a verified, still-fresh OTP row for this email
+        const [otpRows] = await pool.execute(
+            `SELECT * FROM otp_verifications
+             WHERE email = ? AND verified = 1
+               AND created_at > NOW() - INTERVAL ${OTP_VALIDITY_MINUTES} MINUTE`,
+            [email]
+        );
+        if (otpRows.length === 0) {
+            return res.status(400).json({ message: 'Please verify your email with the OTP first.' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const [result] = await pool.execute(
+            'INSERT INTO users (username, password_hash, email) VALUES (?, ?, ?)',
+            [username, hashedPassword, email]
+        );
+
+        // OTP served its purpose — delete so it can't be replayed
+        await pool.execute('DELETE FROM otp_verifications WHERE email = ?', [email]);
 
         res.status(201).json({
             status: 'success',
@@ -682,11 +779,12 @@ router.post('/register', async (req, res) => {
         });
     } catch (error) {
         if (error.code === 'ER_DUP_ENTRY') {
-            return res.status(400).json({ message: 'Username is already taken' });
+            return res.status(400).json({ message: 'Username or email is already taken' });
         }
         res.status(500).json({ message: error.message });
     }
 });
+
 
 router.post('/login', async (req, res) => {
     try {
