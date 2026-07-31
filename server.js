@@ -4,7 +4,7 @@ const axios = require('axios');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const path = require('path');
-const { TOPIC_NAMES, NON_TOPIC_FEATURE_COUNT } = require('./topics_config');
+const { TOPIC_NAMES2, NON_TOPIC_FEATURE_COUNT } = require('./topics_config');
 
 const app = express();
 const router = express.Router();
@@ -23,32 +23,7 @@ const pool = mysql.createPool({
     connectionLimit: 10
 });
 
-const TOPIC_NAMES = [
-  "Array", "Backtracking", "Biconnected Component", "Binary Indexed Tree",
-  "Binary Search", "Binary Search Tree", "Binary Tree", "Bit Manipulation",
-  "Bitmask", "Brainteaser", "Breadth-First Search", "Bucket Sort",
-  "Combinatorics", "Counting", "Counting Sort", "Data Stream",
-  "Depth-First Search", "Design", "Divide and Conquer", "Doubly-Linked List",
-  "Dynamic Programming", "Enumeration", "Eulerian Circuit", "Game Theory",
-  "Geometry", "Graph", "Greedy", "Hash Function", "Hash Table",
-  "Heap (Priority Queue)", "Interactive", "Iterator", "Line Sweep",
-  "Linked List", "Math", "Matrix", "Memoization", "Merge Sort",
-  "Minimum Spanning Tree", "Monotonic Queue", "Monotonic Stack",
-  "Number Theory", "Ordered Set", "Prefix Sum", "Probability and Statistics",
-  "Queue", "Quickselect", "Radix Sort", "Randomized", "Recursion",
-  "Rejection Sampling", "Reservoir Sampling", "Rolling Hash", "Segment Tree",
-  "Shortest Path", "Simulation", "Sliding Window", "Sort", "Sorting",
-  "Stack", "String", "String Matching", "Strongly Connected Component",
-  "Suffix Array", "Topological Sort", "Tree", "Trie", "Two Pointers",
-  "Union Find"
-];
- const topics_total_count = [
-    1686, 89, 1, 34, 270, 29, 130, 220, 47, 16, 198, 6, 49, 150, 9, 13,
-       252, 94, 45, 9, 533, 118, 3, 25, 38, 141, 383, 31, 614, 170, 5, 5,
-       6, 66, 531, 222, 41, 9, 3, 18, 55, 74, 59, 188, 6, 40, 7, 3, 12,
-       40, 2, 4, 25, 57, 29, 171, 134, 1, 406, 141, 700, 33, 3, 5, 28, 191,
-       45, 186, 74
- ];
+
 // added all quesztion manually 
 // POST /api/save-manual-setup
 app.post('/api/save-manual-setup', async (req, res) => {
@@ -249,25 +224,7 @@ app.get('/api/is-synced/:uid', async (req, res) => {
 });
 
 // api for getting question count for each topic
-const TOPIC_NAMES = [
-  "Array", "Backtracking", "Biconnected Component", "Binary Indexed Tree",
-  "Binary Search", "Binary Search Tree", "Binary Tree", "Bit Manipulation",
-  "Bitmask", "Brainteaser", "Breadth-First Search", "Bucket Sort",
-  "Combinatorics", "Counting", "Counting Sort", "Data Stream",
-  "Depth-First Search", "Design", "Divide and Conquer", "Doubly-Linked List",
-  "Dynamic Programming", "Enumeration", "Eulerian Circuit", "Game Theory",
-  "Geometry", "Graph", "Greedy", "Hash Function", "Hash Table",
-  "Heap (Priority Queue)", "Interactive", "Iterator", "Line Sweep",
-  "Linked List", "Math", "Matrix", "Memoization", "Merge Sort",
-  "Minimum Spanning Tree", "Monotonic Queue", "Monotonic Stack",
-  "Number Theory", "Ordered Set", "Prefix Sum", "Probability and Statistics",
-  "Queue", "Quickselect", "Radix Sort", "Randomized", "Recursion",
-  "Rejection Sampling", "Reservoir Sampling", "Rolling Hash", "Segment Tree",
-  "Shortest Path", "Simulation", "Sliding Window", "Sort", "Sorting",
-  "Stack", "String", "String Matching", "Strongly Connected Component",
-  "Suffix Array", "Topological Sort", "Tree", "Trie", "Two Pointers",
-  "Union Find"
-];
+
 
 const topics_total_count = [
   1686, 89, 1, 34, 270, 29, 130, 220, 47, 16, 198, 6, 49, 150, 9, 13,
@@ -278,10 +235,7 @@ const topics_total_count = [
 ];
 
 // Map total counts array to topic names for easy dictionary lookup
-const totalCountsMap = {};
-TOPIC_NAMES.forEach((topic, idx) => {
-  totalCountsMap[topic] = topics_total_count[idx] || 0;
-});
+
 
 app.get('/api/eachtopic/:uid', async (req, res) => {
   const { uid } = req.params;
@@ -293,29 +247,38 @@ app.get('/api/eachtopic/:uid', async (req, res) => {
     );
 
     const topic_count = {};
-    for (const topic of TOPIC_NAMES) {
-      topic_count[topic] = 0;
+    for (let i = 0; i < TOPIC_NAMES2.length; i++) {
+      topic_count[i] = 0;
     }
+    
+    
 
     for (const number of data) {
       const [qRows] = await pool.query(
-        'SELECT topic_vector FROM questions WHERE question_number = ?', 
+        'SELECT question_vector FROM questions WHERE question_number = ?', 
         [number.question_number]
       );
+      console.log(2)
 
       if (qRows.length > 0) {
-        let topic_vector = qRows[0].topic_vector;
+        console.log(3)
+        let topic_vector = qRows[0].question_vector;
 
         if (typeof topic_vector === 'string') {
           topic_vector = JSON.parse(topic_vector);
         }
+        console.log("TOPIC_NAMES2 =", TOPIC_NAMES2);
+        console.log("length =", TOPIC_NAMES2.length);
+        console.log("vector length =", topic_vector.length);
 
         if (Array.isArray(topic_vector)) {
-          // Iterate over all topics starting at index 8 of vector
-          for (let i = 0; i < TOPIC_NAMES.length; i++) {
-            const vectorIndex = 8 + i;
+          // Iterate over all topics starting at index 3 of vector
+          for (let i = 0; i < TOPIC_NAMES2.length; i++) {
+            const vectorIndex = 3 + i;
+            console.log(topic_vector[vectorIndex])
             if (topic_vector[vectorIndex] > 0) {
-              topic_count[TOPIC_NAMES[i]] += 1;
+              topic_count[i] += 1;
+              console.log(`Incremented count for topic: ${TOPIC_NAMES2[i]} (index ${vectorIndex})`);
             }
           }
         }
@@ -325,7 +288,7 @@ app.get('/api/eachtopic/:uid', async (req, res) => {
     return res.status(200).json({ 
       success: true, 
       data: topic_count, 
-      metadata: totalCountsMap 
+      metadata: topics_total_count 
     });
 
   } catch (err) {

@@ -14,7 +14,7 @@
 
 const NON_TOPIC_FEATURE_COUNT = 3; // Acceptance Rate, Likes, Dislikes
 
-const TOPIC_NAMES = [
+const TOPIC_NAMES2 = [
   "Array", "Backtracking", "Biconnected Component", "Binary Indexed Tree",
   "Binary Search", "Binary Search Tree", "Binary Tree", "Bit Manipulation",
   "Bitmask", "Brainteaser", "Breadth-First Search", "Bucket Sort",
@@ -34,4 +34,4 @@ const TOPIC_NAMES = [
   "Union Find"
 ];
 
-module.exports = { NON_TOPIC_FEATURE_COUNT, TOPIC_NAMES };
+module.exports = { TOPIC_NAMES2,NON_TOPIC_FEATURE_COUNT };

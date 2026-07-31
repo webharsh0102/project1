@@ -21,7 +21,7 @@ if (!user || !user.uid) {
 
 //
 // TOPIC_NAMES list matching the vector indices in server.js
-const TOPIC_NAMES2 = [
+const TOPIC_NAMES = [
   "Array", "Backtracking", "Biconnected Component", "Binary Indexed Tree",
   "Binary Search", "Binary Search Tree", "Binary Tree", "Bit Manipulation",
   "Bitmask", "Brainteaser", "Breadth-First Search", "Bucket Sort",
@@ -61,7 +61,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // Get current user ID (adjust logic to pull from global user variable/session)
-  const uid = typeof currentUserId !== "undefined" ? currentUserId : "123";
+  const uid = user.uid
 
   const response = await fetchTopicData(uid);
   if (!response || !response.success) {
@@ -70,28 +70,31 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   const solvedMap = response.data || {};
-  const totalMap = response.metadata || {};
+  const totalMap = response.metadata || [];
 
   container.innerHTML = ""; // Clear existing grid items
 
   // Render all topics from TOPIC_NAMES
-  TOPIC_NAMES2.forEach((topicName) => {
-    const solved = solvedMap[topicName] || 0;
-    const total = totalMap[topicName] || 0;
+  
+  
+  for (let i = 0; i < TOPIC_NAMES.length; i++)
+  {
+    const solved = solvedMap[i] || 0;
+    const total = totalMap[i] || 0;
     const percent = total > 0 ? Math.round((solved / total) * 100) : 0;
 
     const wrapper = document.createElement("div");
     wrapper.className = "topic-wrapper";
-    wrapper.setAttribute("data-topic", topicName);
+    wrapper.setAttribute("data-topic", TOPIC_NAMES[i]);
 
     wrapper.innerHTML = `
       <button class="topic-badge">
-        <span class="topic-title">${topicName}</span>
+        <span class="topic-title">${TOPIC_NAMES[i]}</span>
         <span class="percent-pill">${percent}%</span>
       </button>
       <div class="tooltip-card">
         <div class="tooltip-header">
-          <span class="tooltip-title">${topicName}</span>
+          <span class="tooltip-title">${TOPIC_NAMES[i]}</span>
           <span class="tooltip-count">${solved}/${total} Solved</span>
         </div>
         <div class="progress-track">
@@ -101,7 +104,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     `;
 
     container.appendChild(wrapper);
-  });
+  }
 });
 // ---------------------------------------------------------------------
 // Boost / Suppress topic selectors
@@ -109,9 +112,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 function populateTopicSelectors() {
   const boostSelect = document.getElementById('boostTopics');
   const suppressSelect = document.getElementById('suppressTopics');
-  if (!boostSelect || !suppressSelect || typeof TOPIC_NAMES2 === 'undefined') return;
+  if (!boostSelect || !suppressSelect || typeof TOPIC_NAMES === 'undefined') return;
 
-  TOPIC_NAMES2.forEach(topic => {
+  TOPIC_NAMES.forEach(topic => {
     const boostOption = document.createElement('option');
     boostOption.value = topic;
     boostOption.textContent = topic;
